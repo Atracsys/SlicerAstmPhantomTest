@@ -127,3 +127,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/AstmPhantomTest/Resources/Icons/AstmPhantomTest.svg
+/AstmPhantomTest/Resources/defaultCalibs.txt
