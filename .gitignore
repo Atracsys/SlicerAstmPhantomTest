@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 /AstmPhantomTest/Resources/Icons/AstmPhantomTest.svg
 /AstmPhantomTest/Resources/defaultCalibs.txt
+/readme_img/ext_manager_button.png
+/readme_img/extension_manager.png

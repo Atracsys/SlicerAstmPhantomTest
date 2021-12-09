@@ -3,7 +3,18 @@ This software is a module for [3D Slicer](https://www.slicer.org) to perform the
 
 This test relies on a calibration object, hereafter referred to as the "phantom", of known dimensions. Performing measurements on such a phantom provides a reliable assessment of the tracking system accuracy and precision.
 
-# Material
+# Table of contents
+- [Material](#material)
+- [Required software](#requiredSoft)
+   - [PLUS Toolkit](#plusInstall)
+   - [3D Slicer](#slicerInstall)
+- [Usage](#usage)
+   - [Setup](#setup)
+   - [Launching the software](#launch)
+   - [Performing the tests](#tests)
+   - [Getting the results](#results)
+
+# Material<a name="material"></a>
 To perform the test, the following items are necessary:
 - [ ] A **phantom** with an array of divots and a reference tracked array rigidly attached. See the [standard](https://www.astm.org/f2554-18.html) for requirements and recommendations for its design and manufacturing.
 - [ ] The tested **tracking system**, typically including
@@ -11,8 +22,8 @@ To perform the test, the following items are necessary:
   - [ ] A **tracker** which spatially locates the various arrays aforementionned. Various technologies can be utilized (optical, magnetic, etc).
   - [ ] A **computer** to receive and analyze the tracking data. The present software is to be installed on this computer, alongside the various supporting tools and libraries. Since this software also provides visual guidance to perform the test, a computer monitor is recommended.
 
-# Required software
-## PLUS Toolkit
+# Required software<a name="requiredSoft"></a>
+## PLUS Toolkit<a name="plusInstall"></a>
 [PLUS Toolkit](https://plustoolkit.github.io/) is a free, open-source set of software tools for Computer-Assisted Surgery, which includes a wrapper for SDK's from many manufacturers of tracking systems. This enables a standardization of the tracking data streaming from the tracker to the computer, thanks to an [OpenIGTLink](http://openigtlink.org) server (the **Plus Server**).
 
 ### Installation
@@ -117,27 +128,43 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
 
 * Other device-specific parameters can be set, depending on the manufacturer and/or the tracker. For example, for Atracsys trackers, the device parameter `SymmetriseCoordinates="1"` also needs to be set.
 
-## 3D Slicer
-[3D Slicer](https://www.slicer.org) (or "Slicer" for short) is a free, open-source software dedicated to medical image analysis. One of strengths of Slicer is its modularity, as it is possible to develop extensions to further expand its features or use its platform to create a dedicated software. The latter is the approach chosen for this project. Our Slicer extension sets up an **OpenIGTLink client**, connects to the **Plus Server** and receives and analyzes the tracking data to perform the ASTM Phantom Test.
+## 3D Slicer<a name="slicerInstall"></a>
+[3D Slicer](https://www.slicer.org) (or "Slicer" for short) is a free, open-source software dedicated to medical image analysis. One of strengths of Slicer is its modularity, as it is possible to develop extensions to further expand its features or use its platform to create a dedicated software. The latter is the approach chosen for this project. Our Slicer module sets up an **OpenIGTLink client**, connects to the **Plus Server** and receives and analyzes the tracking data to perform the ASTM Phantom Test.
 
 ### Installation
 From Slicer's [download page](https://download.slicer.org), choose the **Preview Release** corresponding to your OS. Do not download the Stable Release, as it does yet not include all necessary features.
+Moreover, since our module requires Slicer to run an OpenIGTLink client, the extension **SlicerOpenIGTLink** also needs to be installed. To do so, start Slicer and head to the Extensions Manager and install the extension as shown below.
 
-# Usage
+![Extension Manager Button](/readme_img/ext_manager_button.svg)
+
+![Extension Manager](/readme_img/extension_manager.svg)
+
+### Adding the module
+Now that Slicer is all set up, the ASTM Phantom Test module can be added. First, clone or download the present repository to have the `AstmPhantomTest` folder locally on the computer. Then, 
+
+# Usage<a name="usage"></a>
 ## General guidelines
 For a better reliability of the tests results, these guidelines must be followed:
 1. the phantom cannot be so close to the working volume borders that the pointer can get out of the device field of view while performing the tests.
 2. unless stated otherwise, the pointer shall be oriented so as to ensure an optimal tracking accuracy. For example, on an optical tracker, the arrays should face the cameras as much as possible.
 
-## Setup
+## Setup<a name="setup"></a>
 The tracker and the phantom are set up so that:
-1. the tracker is set up according to the manufacturer's specifications (typically in orientation).
+1. the tracker is installed according to the manufacturer's specifications (typically in orientation).
 2. the phantom is placed within the working volume of the tracker (near its center at first).
 3. the operator can manipulate the pointer with respect to the phantom with ease, without occluding the device lines of sight. The operator should also be able to monitor the progress of the tests on the screen monitor. See example of setup below.
 
 ![Example of setup](/readme_img/setup_example_light.svg#gh-light-mode-only)
 ![Example of setup](/readme_img/setup_example_dark.svg#gh-dark-mode-only)
 
-## Launching the software
+## Launching the software<a name="launch"></a>
+Performing the ASTM Phantom Test first starts with connecting the tracker to the computer on which the software is installed. For more details about this connection (e.g. cabling, network configuration, drivers), please refer to the tracker manual.
+ Then, the Plus Server is launched by running `PlusServerLauncher.exe` from the `bin` repository of PLUS Toolkit.
 
-## Performing the tests
+
+## Performing the tests<a name="tests"></a>
+
+## Getting the results<a name="results"></a>
+- md report
+- json
+- log file
