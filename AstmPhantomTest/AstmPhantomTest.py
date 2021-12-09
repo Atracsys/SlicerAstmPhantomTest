@@ -229,15 +229,15 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
           logging.error(msg)
           slicer.util.errorDisplay(msg)
       else:
-        self.ptrRefNode = slicer.mrmlScene.GetFirstNodeByName('NavexPtrToNavex4')
-        self.refNode = slicer.mrmlScene.GetFirstNodeByName('Navex4ToTracker')
-        self.ptrNode = slicer.mrmlScene.GetFirstNodeByName('NavexPtrToTracker')
+        self.ptrRefNode = slicer.mrmlScene.GetFirstNodeByName('PointerToPhantom')
+        self.refNode = slicer.mrmlScene.GetFirstNodeByName('PhantomToTracker')
+        self.ptrNode = slicer.mrmlScene.GetFirstNodeByName('PointerToTracker')
         if self.ptrRefNode == None:
-          logging.info('PointConnector: NavexPtrToNavex4 node not found')
+          logging.info('PointConnector: PointerToPhantom node not found')
         elif self.refNode == None:
-          logging.info('PointConnector: Navex4ToTracker node not found')
+          logging.info('PointConnector: PhantomToTracker node not found')
         elif self.ptrNode == None:
-          logging.info('PointConnector: NavexPtrToTracker node not found')
+          logging.info('PointConnector: PointerToTracker node not found')
         else:
           logging.info("PointConnector: all required transform nodes found, lets process!")
           self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
@@ -497,14 +497,14 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     calledNode = calldata
     logging.info('onNodeAdded: Called for ' + calledNode.GetName())
-    if calledNode.GetName() == 'NavexPtrToNavex4' or \
-      calledNode.GetName() == 'Navex4ToTracker' or \
-      calledNode.GetName() == 'NavexPtrToTracker':
-        if calledNode.GetName() == 'NavexPtrToNavex4':
+    if calledNode.GetName() == 'PointerToPhantom' or \
+      calledNode.GetName() == 'PhantomToTracker' or \
+      calledNode.GetName() == 'PointerToTracker':
+        if calledNode.GetName() == 'PointerToPhantom':
           self.ptrRefNode = calledNode
-        if calledNode.GetName() == 'Navex4ToTracker':
+        if calledNode.GetName() == 'PhantomToTracker':
           self.refNode = calledNode
-        if calledNode.GetName() == 'NavexPtrToTracker':
+        if calledNode.GetName() == 'PointerToTracker':
           self.ptrNode = calledNode
       
         if self.ptrNode and self.refNode and self.ptrRefNode:
