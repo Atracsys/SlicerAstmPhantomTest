@@ -70,7 +70,7 @@ class WorkingVolumeActor(vtk.vtkActor):
 
 class WorkingVolume(vtk.vtkObject):
 
-  def __init__(self, topWVWidget, sideWVWidget):
+  def __init__(self, topWVWidget, frontWVWidget):
     super().__init__()
     self.id = "XXXXX" # working volume id, typically the tracker model (XXXXX)
 
@@ -83,14 +83,14 @@ class WorkingVolume(vtk.vtkObject):
     self.renTop.AddActor(self.actorTop)
     self.renTop.AddActor(self.actorTop.edges)
 
-    self.actorSide = WorkingVolumeActor()
-    self.actorSide.GetProperty().SetColor(1,1,1)
-    self.actorSide.GetProperty().SetOpacity(0.2)
-    self.actorSide.edges.GetProperty().SetColor(1,0,0.8)
-    self.renSide = sideWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-    self.renSide.GetActiveCamera().ParallelProjectionOn()
-    self.renSide.AddActor(self.actorSide)
-    self.renSide.AddActor(self.actorSide.edges)
+    self.actorFront = WorkingVolumeActor()
+    self.actorFront.GetProperty().SetColor(1,1,1)
+    self.actorFront.GetProperty().SetOpacity(0.2)
+    self.actorFront.edges.GetProperty().SetColor(1,0,0.8)
+    self.renFront = frontWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
+    self.renFront.GetActiveCamera().ParallelProjectionOn()
+    self.renFront.AddActor(self.actorFront)
+    self.renFront.AddActor(self.actorFront.edges)
 
     self.__mat = vtk.vtkMatrix4x4()
     self.pq = PosQueue(20)  # queue to continuously store the last 20 pointer positions
@@ -104,9 +104,9 @@ class WorkingVolume(vtk.vtkObject):
     self.movingTolMin = {"tol": 0.5, "depth":300}
     self.movingTolMax = {"tol": 1.5, "depth":3000}
 
-    self.rollAxis = [0, 0, 1]
-    self.pitchAxis = [-1, 0, 0]
-    self.yawAxis = [0, -1, 0]
+    self.rollAxis = np.array([0, 0, 1])
+    self.pitchAxis = np.array([-1, 0, 0])
+    self.yawAxis = np.array([0, -1, 0])
 
   # Simplified model of the phantom indicating its position in working volume    
   def readSimpPhantomModel(self, path):
@@ -158,7 +158,7 @@ class WorkingVolume(vtk.vtkObject):
           if l.startswith('PC'):
             self.locs['PC'] = p
             self.renTop.GetActiveCamera().SetFocalPoint(p.tolist())
-            self.renSide.GetActiveCamera().SetFocalPoint(p.tolist())
+            self.renFront.GetActiveCamera().SetFocalPoint(p.tolist())
           if l.startswith('PR'):
             self.locs['PR'] = p
           if l.startswith('PL'):
@@ -167,24 +167,26 @@ class WorkingVolume(vtk.vtkObject):
             self.locs['PBK'] = p
           if l.startswith('PBT'):
             self.locs['PBT'] = p
-          if l.startswith('TCAMPOS'):
-            self.renTop.GetActiveCamera().SetPosition((self.locs['PC'] + p).tolist())
-          if l.startswith('TCAMVUP'):
-            self.renTop.GetActiveCamera().SetViewUp(p.tolist())
-          if l.startswith('SCAMPOS'):
-            self.renSide.GetActiveCamera().SetPosition((self.locs['PC'] + p).tolist())
-          if l.startswith('SCAMVUP'):
-            self.renSide.GetActiveCamera().SetViewUp(p.tolist())
           if l.startswith('ROLL'):
-            self.rollAxis = p.tolist()
+            self.rollAxis = p
           if l.startswith('PITCH'):
-            self.pitchAxis = p.tolist()
+            self.pitchAxis = p
           if l.startswith('YAW'):
-            self.yawAxis = p.tolist()
+            self.yawAxis = p
+
+    # Setup cameras for working volume guidance
+    mag = self.locs['PBK'][2] # magnitude of the depth of the working volume
+    # Top view of the working volume
+    self.renTop.GetActiveCamera().SetPosition((self.locs['PC'] + 2*mag*self.yawAxis).tolist())
+    # initialize the cam far enough
+    self.renTop.GetActiveCamera().SetViewUp((-self.rollAxis).tolist())
+    # Front view of the working volume
+    self.renFront.GetActiveCamera().SetPosition((self.locs['PC'] + 2*mag*self.rollAxis).tolist())
+    self.renFront.GetActiveCamera().SetViewUp(self.yawAxis.tolist())
 
     if nodes:
       self.actorTop.setNodes(nodes)
-      self.actorSide.setNodes(nodes)
+      self.actorFront.setNodes(nodes)
     else:
       msg = "No nodes could be read in the working volume file"
       logging.error(msg)

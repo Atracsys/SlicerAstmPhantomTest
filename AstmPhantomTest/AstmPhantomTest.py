@@ -86,7 +86,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       </view>
       </item>
       <item>
-      <view class="vtkMRMLViewNode" singletontag="SideWV">
+      <view class="vtkMRMLViewNode" singletontag="FrontWV">
         <property name="viewlabel" action="default">S</property>
       </view>
       </item>
@@ -139,14 +139,14 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.logic.phantom.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
       self.logic.pointer.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
       self.logic.workingVolume.simpPhantomModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeTopWV')
-      self.logic.workingVolume.simpPhantomModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeSideWV')
+      self.logic.workingVolume.simpPhantomModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeFrontWV')
 
       self.topWVWidget = slicer.app.layoutManager().threeDWidget('ViewTopWV')
       self.topWVRenderer = self.topWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
       self.topWVCam = self.topWVRenderer.GetActiveCamera()
-      self.sideWVWidget = slicer.app.layoutManager().threeDWidget('ViewSideWV')
-      self.sideWVRenderer = self.sideWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-      self.sideWVCam = self.sideWVRenderer.GetActiveCamera()
+      self.frontWVWidget = slicer.app.layoutManager().threeDWidget('ViewFrontWV')
+      self.frontWVRenderer = self.frontWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
+      self.frontWVCam = self.frontWVRenderer.GetActiveCamera()
 
       # Connections
 
@@ -612,8 +612,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.mainWidget.show()
     self.topWVWidget = slicer.app.layoutManager().threeDWidget('ViewTopWV')
     self.topWVWidget.hide()
-    self.sideWVWidget = slicer.app.layoutManager().threeDWidget('ViewSideWV')
-    self.sideWVWidget.hide()
+    self.frontWVWidget = slicer.app.layoutManager().threeDWidget('ViewFrontWV')
+    self.frontWVWidget.hide()
 
     # Storing access to important vtk items
     self.mainRenderer = self.mainWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
@@ -623,8 +623,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.topWVRenderer = self.topWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
     self.topWVCam = self.topWVRenderer.GetActiveCamera()
 
-    self.sideWVRenderer = self.sideWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-    self.sideWVCam = self.sideWVRenderer.GetActiveCamera()
+    self.frontWVRenderer = self.frontWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
+    self.frontWVCam = self.frontWVRenderer.GetActiveCamera()
 
     # Creating core objects
     self.operatorId = None
@@ -638,10 +638,10 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
     self.targets = Targets(self.mainRenderer)
     self.targetsDone = Targets(self.mainRenderer)
-    self.workingVolume = WorkingVolume(self.topWVWidget, self.sideWVWidget)
+    self.workingVolume = WorkingVolume(self.topWVWidget, self.frontWVWidget)
     self.workingVolume.readSimpPhantomModel(simpPhantomPath)
     self.wvTargetsTop = Targets(self.workingVolume.renTop)
-    self.wvTargetsSide = Targets(self.workingVolume.renSide)
+    self.wvTargetsFront = Targets(self.workingVolume.renFront)
     self.curLoc = "X" # current location in the working volume
 
     self.tests = [[]] # initialization
@@ -749,7 +749,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     if self.workingVolume.readWorkingVolumeFile(path):
       # Remove previous targets
       self.wvTargetsTop.removeAllTargets()
-      self.wvTargetsSide.removeAllTargets()
+      self.wvTargetsFront.removeAllTargets()
       # Add the new ones
       for k in self.workingVolume.locs:
         self.addWorkingVolumeTarget(k)
@@ -768,12 +768,12 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       # and readWorkingVolumeFile call addWorkingVolumeTarget
       if not targetId in self.wvTargetsTop.targets:
         self.wvTargetsTop.addTarget(targetId, self.workingVolume.locs[targetId], True, True, 50)
-      if not targetId in self.wvTargetsSide.targets:
-        self.wvTargetsSide.addTarget(targetId, self.workingVolume.locs[targetId], True, True, 50)
+      if not targetId in self.wvTargetsFront.targets:
+        self.wvTargetsFront.addTarget(targetId, self.workingVolume.locs[targetId], True, True, 50)
   
   def removeWorkingVolumeTarget(self, targetId):
     self.wvTargetsTop.removeTarget(targetId)
-    self.wvTargetsSide.removeTarget(targetId)
+    self.wvTargetsFront.removeTarget(targetId)
 
   def readGroundTruthFile(self, path):
     if self.phantom.readGroundTruthFile(path):
@@ -886,10 +886,10 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     logging.info('Starting working volume guidance')
     self.mainWidget.hide()
     self.topWVWidget.show()
-    self.sideWVWidget.show()
+    self.frontWVWidget.show()
     slicer.app.processEvents() # makes sure the rendering/display is done before continuing
     ResetCameraScreenSpace(self.topWVRenderer)
-    ResetCameraScreenSpace(self.sideWVRenderer)
+    ResetCameraScreenSpace(self.frontWVRenderer)
     if len(self.wvTargetsTop.targets) > 0:
       self.workingVolume.watchTransfoNode() # monitor phantom model placement
       self.wvTargetsTop.proxiDetect = True
@@ -911,7 +911,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.sounds["touchdown"].play()
     self.mainWidget.show()
     self.topWVWidget.hide()
-    self.sideWVWidget.hide()
+    self.frontWVWidget.hide()
     self.workingVolume.watchTransfoNode(False) # stop phantom model placement monitoring
     self.workingVolume.RemoveObserver(self.wvgObs1)
     self.wvTargetsTop.proxiDetect = False
