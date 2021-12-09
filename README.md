@@ -49,13 +49,13 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
    MaxMeanRegistrationErrorMm="1.0"
    ToolReferenceFrame="Tracker" >
    <DataSources>
-    <DataSource Type="Tool" Id="PhantArray" TrackingType="PASSIVE" GeometryFile="geometries/PhantArray.ini" />
-    <DataSource Type="Tool" Id="PointArray" TrackingType="PASSIVE" GeometryFile="geometries/PointArray.ini" />
+    <DataSource Type="Tool" Id="Phantom" TrackingType="PASSIVE" GeometryFile="geometries/geomPhant.ini" />
+    <DataSource Type="Tool" Id="Pointer" TrackingType="PASSIVE" GeometryFile="geometries/array02.ini" />
    </DataSources>
    <OutputChannels>
     <OutputChannel Id="TrackerStream">
-     <DataSource Type="Tool" Id="PhantArray" />
-     <DataSource Type="Tool" Id="PointArray" />
+     <DataSource Type="Tool" Id="Phantom" />
+     <DataSource Type="Tool" Id="Pointer" />
     </OutputChannel>
    </OutputChannels>
   </Device>
@@ -72,9 +72,9 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
     <Message Type="TRANSFORM" />
    </MessageTypes>
    <TransformNames>
-    <Transform Name="PointArrayToPhantArray" />
-    <Transform Name="PhantArrayToTracker" />
-    <Transform Name="PointArrayToTracker" />
+    <Transform Name="PointerToPhantom" />
+    <Transform Name="PhantomToTracker" />
+    <Transform Name="PointerToTracker" />
    </TransformNames>
   </DefaultClientInfo>
  </PlusOpenIGTLinkServer>  
@@ -86,8 +86,8 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
 * The `Device > ToolReferenceFrame` gives a name to the reference frame of the tracking coordinates, typically the tracker.
 
 * `DataSources` provides the inputs i.e. the description of the tracked arrays. For our ASTM Phantom Test, two are necessary:
-  - the array attached to the phantom (here `PhantArray`)
-  - the array of the pointer (here `PointArray`)
+  - the array attached to the phantom with the id `Phantom`. This id must remain unchanged.
+  - the array of the pointer with the id `Pointer`. This id must remain unchanged.
   Each array can be for `ACTIVE` tracking (with emitting markers) or `PASSIVE` tracking (with reflective markers). `GeometryFile` is set as the path (relative to the xml configuration file) of the geometry of the array (which enables the detection and tracking). For Atracsys trackers for example, the geometry is contained in an .ini file as such:
   ```ini
   [geometry]
@@ -116,13 +116,13 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
   ```
   However, each manufacturer has its own format for such geometry files, so please refer to the tracker's manual for more information.
 
-* The `OutputChannel` will be composed of the two streams of our `DataSources` so `PhantArray` and `PointArray`
+* The `OutputChannel` will be composed of the two streams of our `DataSources` so `Phantom` and `Pointer`
 
 * The Plus Server is an OpenIGTLink server, which sends messages of type `TRANSFORM`. These represent 4x4 matrices describing the transform from one item to another. For the ASTM Phantom Test, we need three transforms:
-  - the transform from the pointer (`PointArray`) to the phantom (`PhantArray`), which results in `PointArrayToPhantArray`
-  - the transform from the phantom (`PhantArray`) to the tracker (`Tracker`), which results in `PhantArrayToTracker`
-  - the transform from the pointer (`PointArray`) to the tracker (`Tracker`), which results in `PointArrayToTracker`
-  <br>**Be careful** with the naming of the output transforms, for these are only parsed as *item1*To*item2* and will not function if mispelled.
+  - the transform from the pointer (`Pointer`) to the phantom (`Phantom`), which results in `PointerToPhantom`
+  - the transform from the phantom (`Phantom`) to the tracker (`Tracker`), which results in `PhantomToTracker`
+  - the transform from the pointer (`Pointer`) to the tracker (`Tracker`), which results in `PointerToTracker`
+  <br>**DO NOT** change the names of the output transforms, as these are hardcoded in the Slicer module.
   
   The option `SendValidTransformsOnly` has to be set to `FALSE`.
 
@@ -140,7 +140,21 @@ Moreover, since our module requires Slicer to run an OpenIGTLink client, the ext
 ![Extension Manager](/readme_img/extension_manager.svg)
 
 ### Adding the module
-Now that Slicer is all set up, the ASTM Phantom Test module can be added. First, clone or download the present repository to have the `AstmPhantomTest` folder locally on the computer. Then, 
+Now that Slicer is all set up, the ASTM Phantom Test module can be added. First, clone or download the present repository to have the `AstmPhantomTest` folder locally on the computer. Then, head to the `Applications Settings` via the menu.
+
+![Application Settings](/readme_img/application_settings.svg)
+
+In `Modules`, select the `AstmPhantomTest` folder to be added as an `Additional Module Path`. This will require a restart of Slicer to take effect.
+
+![Module import](/readme_img/module_import.svg)
+
+The ASTM Phantom Test module is now installed, it can be accessed via the dropdown menu in the `Tracking` category.
+
+![Module access](/readme_img/module_access.svg)
+
+Or a shortcut can be set for it in the main menu bar.
+
+![Module shortcut](/readme_img/module_shortcut.svg)
 
 # Usage<a name="usage"></a>
 ## General guidelines
