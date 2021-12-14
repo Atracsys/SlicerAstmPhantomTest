@@ -29,6 +29,8 @@ To perform the test, the following items are necessary:
 ### Installation
 Pre-built installers more than twenty systems are available for Windows from the [Download page](https://plustoolkit.github.io/download.html). To know which installer to choose, you may refer to the table at the bottom of that page. Until a new stable release is available, it is important to download from the **Latest Development Snapshot**, as it includes new features necessary for the tests.
 
+:warning: PLUS Toolkit offers a wrapper to a system SDK, but **does not include the actual SDK**, which needs to be installed separately on the computer. Moreover, there may be a version requirement (e.g, the Atracsys SDK has to be 4.5.2 or more recent).
+
 To install on Linux or Mac OS, please refer to the [Developer's guide](https://plustoolkit.github.io/developersguide).
 
 ### Configuration file
@@ -155,6 +157,33 @@ The ASTM Phantom Test module is now installed, it can be accessed via the dropdo
 Or a shortcut can be set for it in the main menu bar.
 
 ![Module shortcut](/readme_img/module_shortcut.svg)
+
+### Tailor the parameter files
+The module relies on several parameter files to accomodate for the hardware used.
+
+#### The pointer file
+Located in `AstmPhantomTest\Resources\ptr`, this parameter file contains the maximum tilt angle (`MAXTILT`) beyond which the pointer manufacturer does not guarantee tracking.
+This value typically depends on the type of tracking technology and that of the fiducials/markers attached to the pointer.
+The parameter file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the pointer**. This information allows a correct interpretation of the pointer rotations with respect to the tracker.
+
+#### The working volume file
+Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various information:
+- the coordinates of the locations that the phantom should be placed at in the working volume. Beside the center location (`PC`), all other locations lie at the edges of the working volume, as described in the ASTM standard.
+`PBT` is located at the very bottom from the center, `PL` the very left, `PR` the very right and `PBK` the very back. All these coordinates are expressed in the referential of the tracker.
+
+![Locations](/readme_img/wv_locations_light.svg#gh-light-mode-only)
+![Locations](/readme_img/wv_locations_dark.svg#gh-dark-mode-only)
+
+- the actual working volume is described by the `NODES` coordinates (again in the tracker referential frame). The working volume is assumed to be composed of a succession of quadrilateral planes, but their number can vary.
+
+![Nodes](/readme_img/wv_nodes_light.svg#gh-light-mode-only)
+![Nodes](/readme_img/wv_nodes_dark.svg#gh-dark-mode-only)
+
+- the moving tolerance is the threshold that separates actual pointer motion from the slight "wiggle" that typically occurs with most tracking technologies even when the pointer tip is static. Since the magnitude of this wiggle often depends on the distance to the tracker, the range for the moving tolerance is given by two extreme values. `MOVTOLMIN` sets the minimum threshold when the pointer is the closest possible to the tracker (e.g, 0.4mm at 920mm in depth) and `MOVTOLMAX` the maximum when the pointer is the farthest possible (e.g, 1.0mm at 2850mm in depth). The **moving tolerance is automatically set by the module** during the tests within the provided range. Nonetheless, if the user experiences trouble acquiring a divot because the program keeps detecting tip motion when there is none, the moving tolerance can be manually increased live.
+
+- the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**. This information allows a correct interpretation of the pointer rotations with respect to the tracker.
+
+#### The phantom file
 
 # Usage<a name="usage"></a>
 ## General guidelines
