@@ -15,7 +15,7 @@ This test relies on a calibration object, hereafter referred to as the "phantom"
 - [Usage](#usage)
    - [Setup](#setup)
    - [Launching the software](#launch)
-   - [Performing the tests](#tests)
+   - [Running the tests](#tests)
    - [Getting the results](#results)
 - [Troubleshooting](#trouble)
 
@@ -242,6 +242,8 @@ Once Slicer is started, the ASTM Phantom Test module can be accessed via the dro
 
 ![Module access](/readme_img/start_module.svg)
 
+## Running the tests<a name="tests"></a>
+### Preliminary steps
 When the module starts, a dialog window pops up and the user has to select the folder where the [output files](#results) (including the log) will be saved.
 
 Then, if the setup is correct, a 3D view of the phantom should appear as below, with **no visible pointer**.
@@ -252,7 +254,21 @@ If the phantom model appears from another angle with a **yellow visible pointer*
 
 ![Wrong start views](/readme_img/start_wrong.svg)
 
-## Performing the tests<a name="tests"></a>
+![Parameter input 1](/readme_img/parameter_input1.svg)
+
+![Parameter input 2](/readme_img/parameter_input2.svg)
+
+![Locations & tests](/readme_img/locations_tests.svg)
+
+![Calibration](/readme_img/calib.svg)
+
+![Working volume guidance](/readme_img/wv_guidance.svg)
+
+### Single Point Test
+
+### Rotation Tests
+
+### Multi-Point Test
 
 ## Getting the results<a name="results"></a>
 - md report
