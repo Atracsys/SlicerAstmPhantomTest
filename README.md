@@ -8,6 +8,10 @@ This test relies on a calibration object, hereafter referred to as the "phantom"
 - [Required software](#requiredSoft)
    - [PLUS Toolkit](#plusInstall)
    - [3D Slicer](#slicerInstall)
+- [Parameter files](#paramFiles)
+   - [Pointer file](#pointerFile)
+   - [Working volume file](#wvFile)
+   - [Phantom file](#phantomFile)
 - [Usage](#usage)
    - [Setup](#setup)
    - [Launching the software](#launch)
@@ -158,15 +162,15 @@ Or a shortcut can be set for it in the main menu bar.
 
 ![Module shortcut](/readme_img/module_shortcut.svg)
 
-### Tailor the parameter files
+# Parameter files<a name="paramFiles"></a>
 The module relies on several parameter files to accomodate for the hardware used.
 
-#### The pointer file
+## Pointer file<a name="pointerFile"></a>
 Located in `AstmPhantomTest\Resources\ptr`, this parameter file contains the maximum tilt angle (`MAXTILT`) beyond which the pointer manufacturer does not guarantee tracking.
 This value typically depends on the type of tracking technology and that of the fiducials/markers attached to the pointer.
 The parameter file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the pointer**. This information allows a correct interpretation of the pointer rotations with respect to the tracker.
 
-#### The working volume file
+## Working volume file<a name="wvFile"></a>
 Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various information:
 - the coordinates of the locations that the phantom should be placed at in the working volume. Beside the center location (`PC`), all other locations lie at the edges of the working volume, as described in the ASTM standard.
 `PBT` is located at the very bottom from the center, `PL` the very left, `PR` the very right and `PBK` the very back. All these coordinates are expressed in the referential of the tracker.
@@ -183,7 +187,7 @@ Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various 
 
 - the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**. This information allows a correct interpretation of the pointer rotations with respect to the tracker.
 
-#### The phantom file
+## Phantom file<a name="phantomFile"></a>
 
 # Usage<a name="usage"></a>
 ## General guidelines
