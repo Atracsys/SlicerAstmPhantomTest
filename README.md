@@ -262,7 +262,7 @@ Once filled in, the other parameters are unlocked and the user can choose the ap
 
 ![Parameter input 2](/readme_img/parameter_input2.svg)
 
-Once the operator id filled in, the choice in locations is unlocked (6). By default, all [five locations](#wvFile) in the working volume are enabled as recommended by the standard, but the user can, at any time during the session, to disable and skip locations if necessary. Likewise, by default all five tests are enabled (7) as recommended by the standard, but the user can disable certain tests **before** placing the phantom at a location in the working volume, if necessary.
+Once the operator id filled in, the choice in locations is unlocked (6). By default, all [five locations](#wvFile) in the working volume are enabled as recommended by the standard, but the user can, at any time during the session, to disable and skip locations if necessary. Likewise, by default all five tests are enabled (7) as recommended by the standard, but the user can disable certain tests **before** the phantom hits a target location in the working volume, if necessary.
 
 The [moving tolerance](#movTol) slidebar (8) allows the user to monitor and adjust the sensibility to pointer motion. The `Reset Camera` button (9) resets the view of the phantom to an optimum at any time, if the user happened to have moved the scene around with the mouse.
 
@@ -270,7 +270,8 @@ The [moving tolerance](#movTol) slidebar (8) allows the user to monitor and adju
 
 The filling in of operator id also triggers the phantom calibration, which determines the geometrical relationship between the referential frame of the phantom (and thereby its divots) and the reference array attached to it. To perform the calibration, the user only needs to successively pick three separate divots that defines the referential frame (indicated in the [phantom file](#phantomFile) by `REF`).
 
-><a name="acquiMech"></a>For any **point acquisition**, the targets are indicated by a red sphere and their id. Once the pointer hit the target (the correct divot), the point acquisition starts for **one second**, indicated by the target becoming smaller and greener. The point acquisition is done when the target becomes large and green, and a "pop" sound is played. Removing the pointer from the divot then prompts the program to show the next target, if any. Removing the pointer before the point acquisition is done will reset the current target.
+|<a name="acquiMech"></a>For any **point acquisition**, the targets are indicated by a red sphere and their id. Once the pointer hit the target (the correct divot), the point acquisition starts for **one second**, indicated by the target becoming smaller and greener. The point acquisition is done when the target becomes large and green, and a "pop" sound is played. Removing the pointer from the divot then prompts the program to show the next target, if any. Removing the pointer before the point acquisition is done will reset the current target.|
+|---|
 
 ![Calibration](/readme_img/calib.svg)
 
