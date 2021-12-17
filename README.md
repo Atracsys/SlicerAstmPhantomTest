@@ -281,9 +281,15 @@ Once the calibration is over, the actual tests may start but first the phantom n
 
 ### Single Point Test
 
+![Single point test](/readme_img/tests_single.png)
+
 ### Rotation Tests
 
+![Rotation test](/readme_img/tests_rotation.png)
+
 ### Multi-Point Test
+
+![Multi-point test](/readme_img/tests_multi.png)
 
 ## Getting the results<a name="results"></a>
 - md report
