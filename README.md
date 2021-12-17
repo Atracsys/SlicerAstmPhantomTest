@@ -1,5 +1,5 @@
 # ASTM Phantom Test
-This software is a module for [3D Slicer](https://www.slicer.org) to perform the accuracy test of a tracking system as described in the [standard ASTM F2554](https://www.astm.org/f2554-18.html).
+This software is a module for [3D Slicer](https://www.slicer.org) to perform the accuracy test of a tracking system as described in the [standard ASTM F2554](https://www.astm.org/f2554-18.html). (:warning: The procedures described hereafter slightly differ from those of the current version of the standard because they are based on a future revision).
 
 This test relies on a calibration object, hereafter referred to as the "phantom", of known dimensions. Performing measurements on such a phantom provides a reliable assessment of the tracking system accuracy and precision.
 
@@ -31,7 +31,7 @@ To perform the test, the following items are necessary:
 ## PLUS Toolkit<a name="plusInstall"></a>
 [PLUS Toolkit](https://plustoolkit.github.io/) is a free, open-source set of software tools for Computer-Assisted Surgery, which includes a wrapper for SDK's from many manufacturers of tracking systems. This enables a standardization of the tracking data streaming from the tracker to the computer, thanks to an [OpenIGTLink](http://openigtlink.org) server (the **Plus Server**).
 
-### Installation
+### Installation<a name="plusDownload"></a>
 Pre-built installers more than twenty systems are available for Windows from the [Download page](https://plustoolkit.github.io/download.html). To know which installer to choose, the user may refer to the table at the bottom of that page. Until a new stable release is available, it is important to download from the **Latest Development Snapshot**, as it includes new features necessary for the tests.
 
 :warning: PLUS Toolkit offers a wrapper to a system SDK, but **does not include the actual SDK**, which needs to be installed separately on the computer. Moreover, there may be a version requirement (e.g, the Atracsys SDK has to be 4.5.2 or more recent).
@@ -95,7 +95,7 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
 * `DataSources` provides the inputs i.e. the description of the tracked arrays. For our ASTM Phantom Test, two are necessary:
   - the array attached to the phantom with the id `Phantom`. This id must remain unchanged.
   - the array of the pointer with the id `Pointer`. This id must remain unchanged.
-  Each array can be for `ACTIVE` tracking (with emitting markers) or `PASSIVE` tracking (with reflective markers). `GeometryFile` is set as the path (relative to the xml configuration file) of the geometry of the array (which enables the detection and tracking). For Atracsys trackers for example, the geometry is contained in an .ini file as such:
+  Each array can be for `ACTIVE` tracking (with emitting markers) or `PASSIVE` tracking (with reflective markers). <a name="geometryFile"></a>`GeometryFile` is set as the path (relative to the xml configuration file) of the geometry of the array (which enables the detection and tracking). For Atracsys trackers for example, the geometry is contained in an .ini file as such:
   ```ini
   [geometry]
   count=4
@@ -180,7 +180,7 @@ Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various 
 ![Nodes](/readme_img/wv_nodes_light.svg#gh-light-mode-only)
 ![Nodes](/readme_img/wv_nodes_dark.svg#gh-dark-mode-only)
 
-- the moving tolerance<a name="movTol"></a> is the threshold that separates actual pointer motion from the slight "wiggle" that typically occurs with most tracking technologies even when the pointer tip is static. Since the magnitude of this wiggle often depends on the distance to the tracker, the range for the moving tolerance is given by two extreme values. `MOVTOLMIN` sets the minimum threshold when the pointer is the closest possible to the tracker (e.g, 0.4mm at 920mm in depth) and `MOVTOLMAX` the maximum when the pointer is the farthest possible (e.g, 1.0mm at 2850mm in depth). The **moving tolerance is automatically set by the module** during the tests within the provided range. Nonetheless, if the user experiences trouble acquiring a divot because the program keeps detecting tip motion when there is none, the moving tolerance can be manually increased live.
+- the moving tolerance<a name="movTol"></a> is the threshold that separates actual pointer motion from the slight "wiggle" that typically occurs with most tracking technologies even when the pointer tip is static. Since the magnitude of this wiggle often depends on the distance to the tracker, the range for the moving tolerance is given by two extreme values. `MOVTOLMIN` sets the minimum threshold when the pointer is the closest possible to the tracker (e.g, 0.4mm at 920mm in depth) and `MOVTOLMAX` the maximum when the pointer is the farthest possible (e.g, 1.0mm at 2850mm in depth). The **moving tolerance is automatically set by the module** during the tests within the provided range. Nonetheless, if the user experiences trouble acquiring a divot because the program keeps detecting tip motion when there is none, the moving tolerance can be manually increased live (see [troubleshoot](#tbRemainingStatic)).
 
 - the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**. This information allows a correct interpretation of the pointer rotations with respect to the tracker.
 
@@ -250,7 +250,7 @@ Then, if the setup is correct, a 3D view of the phantom should appear as below, 
 
 ![Good start view](/readme_img/start_ok.svg)
 
-If the phantom model appears from another angle with a **yellow visible pointer**, then there is a problem of communication between Slicer and the Plus Server (see [Throubleshooting](#trouble)).
+If the phantom model appears from another angle with a **yellow visible pointer**, then there is a problem of communication between Slicer and the Plus Server (see [Throubleshooting](#noCommunication)).
 
 ![Wrong start views](/readme_img/start_wrong.svg)
 
@@ -262,7 +262,7 @@ Once filled in, the other parameters are unlocked and the user can choose the ap
 
 ![Parameter input 2](/readme_img/parameter_input2.svg)
 
-Once the operator id filled in, the choice in locations is unlocked (6). By default, all [five locations](#wvFile) in the working volume are enabled as recommended by the standard, but the user can, at any time during the session, to disable and skip locations if necessary. Likewise, by default all five tests are enabled (7) as recommended by the standard, but the user can disable certain tests **before** the phantom hits a target location in the working volume, if necessary.
+Once the operator id filled in, the choice in locations is unlocked (6). By default, all [five locations](#wvFile) in the working volume are enabled as recommended by the standard, but the user can, at any time during the session, to disable and skip locations if necessary. <a name="enableTests"></a>Likewise, by default all five tests are enabled (7) as recommended by the standard, but the user can disable certain tests **before** the phantom hits a target location in the working volume, if necessary.
 
 The [moving tolerance](#movTol) slidebar (8) allows the user to monitor and adjust the sensibility to pointer motion. The `Reset Camera` button (9) resets the view of the phantom to an optimum at any time, if the user happened to have moved the scene around with the mouse.
 
@@ -280,26 +280,54 @@ Once the calibration is over, the actual tests may start but first the phantom n
 ![Working volume guidance](/readme_img/wv_guidance.svg)
 
 ### Single Point Test
+Referred to as the *Single Point Accuracy and Precision Test* in the ASTM standard, this test aims at assessing the performance of the tracking system for a single point measurements. To do so, the user must repeatedly acquire the central divot for a certain number of times. The progression of the test is displayed in the top right corner.
 
 ![Single point test](/readme_img/tests_single.png)
 
 ### Rotation Tests
+As described in the ASTM standard, these *Rotation Tests* aim at assessing the stability in measurement of a single point while the pointer rotates around specific axes (roll, pitch, yaw). The definition of these axes are defined in the [pointer file](#pointerFile) and in the [working volume file](#wvFile) in their respective referential frames.
+
+To start the test, the user must lodge the pointer in the central divot, which will toggle the display of the pointer angles with respect to each rotation axes. The current rotation axis to be measured is highlighted by the symbols > and <. The pointer must be **rotated only around that specific axis**, i.e. the other angles shall remain as close to 0 as possible during the test.
+
+To start the actual measurements, the user must first rotate the pointer as detailed above until it is not tracked anymore. Then, performing a counter rotation, the pointer is tracked again, which will trigger the program to begin saving the measurements. The user shall continue rotating that way until they reach the opposite end of the angular range, i.e. until the tracking stops again, which will stop the measurements.
+
+This routine is to be repeated for each axis corresponding to the [enabled rotation tests](#enableTests) in the parameter panel.
+
+|<a name="artifOutOfTracking"></a>Certain rotations may lead to the pointer colliding with parts of the phantom or escaping the divot before it gets out of tracking. It is preferable to prematurly stop the measurements (and hence the rotation test) slightly before reaching these dead-ends. To artificially set the pointer out of tracking, swiftly fully occlude the pointer to the tracker or "spin it away" while remaining in the central divot.
+|---|
 
 ![Rotation test](/readme_img/tests_rotation.png)
 
 ### Multi-Point Test
+As explained in the ASTM standard, this test consists in picking various points on the phantom and comparing the resulting point cloud to the ground truth given by the [phantom file](#phantomFile). For a same set of acquisitions, this comparison is done in two ways: comparing point-to-point distances and actual point cloud registration. The results constitute an assessment of the accuracy of the tracking system in multi-point picking.
+
+To perform the test, the user only needs to measure with the pointer a sequence of points, defined in the [phantom file](#phantomFile) by `SEQ`. During the test, the current target is shown in red and the acquired points become green.
 
 ![Multi-point test](/readme_img/tests_multi.png)
 
 ## Getting the results<a name="results"></a>
-- md report
-- json
-- log file
+Once all the enabled tests for all the enabled locations are done, the program generates various files in the output folder.
+- a **report in HTML** format (to be open with any internet browser), that contains all the statistical analysis of the measurements for each test.
+- a **json file** containing all the parameters and the actual measurements. This is meant to perform some more analysis if desired.
+- a **log file**, which contains all the events that occured during the session. The log is written in real-time, so even if the program crashes, the events are saved. The log file is common for all the sessions performed on a same day.
 
 # Troubleshooting<a name="trouble"></a>
 
-1. *I'm having trouble acquiring a divot although my pointer is static (i.e. placed in a divot).*
+1. <a name="tbRemainingStatic"></a>*I'm having trouble acquiring a divot although my pointer is static (i.e. placed in a divot).*
+   - Check that there is no occlusion of any of the markers.
+   - Check the environment for interferences. For optical systems, use the manufacturer's tools to visually assess in the camera images the absence of reflections that could affect the detection of the markers, typically on the phantom.
+   - Increase the [moving tolerance](#movTol) by increments of 10% of the total range. If the maximum tolerance is reached, you may slightly increase that maximum value in the [working volume file](#wvFile) and restart Slicer. However, increasing the moving tolerance further will hinder the reliability of the tests.
 
-2. *The Plus Server Launcher does not connect to my device or gives me errors.*
+2. <a name="tbPlusServerConnection"></a>*The Plus Server Launcher does not connect to my device or gives me errors.*
+   - Check that the installed version of [PLUS Toolkit](#plusDownload) is the appropriate one for my system.
+   - Check that the SDK version of my system is compatible with PLUS Toolkit. In doubt, you may [contact the PLUS Toolkit development team](https://plustoolkit.github.io/contact.html).
+   - Check that the device is powered on and connected to the computer as per the manufacturer's guidelines.
+   - Check that the computer is well configured for the tracking system as per the manufacturer's guidelines (typically network configuration if connected through ethernet).
+   - Check that the [configuration file](#configFile) has been correctly written.
 
-3. *I don't see the streamed transforms in Slicer.*
+3. <a name="noCommunication"></a>*I don't have the phantom well-oriented at the beginning and I see the yellow pointer.* => There is a problem of communication between Slicer and the Plus Server.
+   - Check that the Plus Server is launched **with the appropriate configuration file** and successfully connected to the tracking system.
+   - In Slicer, head to the Transforms module via the dropdown menu and check the Active Transform list at the top. If "PhantomToTracker" or "PointerToTracker" is missing, check that the [geometry files](#geometryFile) are correct and that their paths in the configuration file are valid.
+
+4. <a name="tbOutOfTracking"></a>*I can't naturally trigger the out of tracking of the pointer during the rotation tests.*
+   - See the recommendation for [artificially ending the rotation measurements](#artifOutOfTracking) prematurly.
