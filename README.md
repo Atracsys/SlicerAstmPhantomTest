@@ -180,12 +180,12 @@ Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various 
 ![Nodes](/readme_img/wv_nodes_light.svg#gh-light-mode-only)
 ![Nodes](/readme_img/wv_nodes_dark.svg#gh-dark-mode-only)
 
-- the moving tolerance is the threshold that separates actual pointer motion from the slight "wiggle" that typically occurs with most tracking technologies even when the pointer tip is static. Since the magnitude of this wiggle often depends on the distance to the tracker, the range for the moving tolerance is given by two extreme values. `MOVTOLMIN` sets the minimum threshold when the pointer is the closest possible to the tracker (e.g, 0.4mm at 920mm in depth) and `MOVTOLMAX` the maximum when the pointer is the farthest possible (e.g, 1.0mm at 2850mm in depth). The **moving tolerance is automatically set by the module** during the tests within the provided range. Nonetheless, if the user experiences trouble acquiring a divot because the program keeps detecting tip motion when there is none, the moving tolerance can be manually increased live.
+- the moving tolerance<a name="movTol"></a> is the threshold that separates actual pointer motion from the slight "wiggle" that typically occurs with most tracking technologies even when the pointer tip is static. Since the magnitude of this wiggle often depends on the distance to the tracker, the range for the moving tolerance is given by two extreme values. `MOVTOLMIN` sets the minimum threshold when the pointer is the closest possible to the tracker (e.g, 0.4mm at 920mm in depth) and `MOVTOLMAX` the maximum when the pointer is the farthest possible (e.g, 1.0mm at 2850mm in depth). The **moving tolerance is automatically set by the module** during the tests within the provided range. Nonetheless, if the user experiences trouble acquiring a divot because the program keeps detecting tip motion when there is none, the moving tolerance can be manually increased live.
 
 - the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**. This information allows a correct interpretation of the pointer rotations with respect to the tracker.
 
 ## Phantom file<a name="phantomFile"></a>
-This parameter file describes the divots on the phantom and their use. All the divots coordinates are listed (`POINT id`,`X`,`Y`,`Z`) and given in the referential frame of the phantom. This referential frame is defined by three divots which ids are given by `REF` in the following order O, X and Y.
+Located in `AstmPhantomTest\Resources\gt`, this parameter file describes the divots on the phantom and their use. All the divots coordinates are listed (`POINT id`,`X`,`Y`,`Z`) and given in the referential frame of the phantom. This referential frame is defined by three divots which ids are given by `REF` in the following order O, X and Y.
 
 The sequence of divots used for the multi-point test is given by `SEQ` and the id of the central divot (used for all the other tests) is given by `CTR`.
 
@@ -254,13 +254,27 @@ If the phantom model appears from another angle with a **yellow visible pointer*
 
 ![Wrong start views](/readme_img/start_wrong.svg)
 
+On the left, there is a parameter panel that requires user input. First, the tracker serial number is prompted (1).
+
 ![Parameter input 1](/readme_img/parameter_input1.svg)
+
+Once filled in, the other parameters are unlocked and the user can choose the appropriate [pointer file](#pointerFile) (2), [working volume file](#wvFile) (3) and [phantom file](#phantomFile) (4). The user also has to input his id in the `Operator` field (5).
 
 ![Parameter input 2](/readme_img/parameter_input2.svg)
 
+Once the operator id filled in, the choice in locations is unlocked (6). By default, all [five locations](#wvFile) in the working volume are enabled as recommended by the standard, but the user can, at any time during the session, to disable and skip locations if necessary. Likewise, by default all five tests are enabled (7) as recommended by the standard, but the user can disable certain tests **before** placing the phantom at a location in the working volume, if necessary.
+
+The [moving tolerance](#movTol) slidebar (8) allows the user to monitor and adjust the sensibility to pointer motion. The `Reset Camera` button (9) resets the view of the phantom to an optimum at any time, if the user happened to have moved the scene around with the mouse.
+
 ![Locations & tests](/readme_img/locations_tests.svg)
 
+The filling in of operator id also triggers the phantom calibration, which determines the geometrical relationship between the referential frame of the phantom (and thereby its divots) and the reference array attached to it. To perform the calibration, the user only needs to successively pick three separate divots that defines the referential frame (indicated in the [phantom file](#phantomFile) by `REF`).
+
+><a name="acquiMech"></a>For any **point acquisition**, the targets are indicated by a red sphere and their id. Once the pointer hit the target (the correct divot), the point acquisition starts for **one second**, indicated by the target becoming smaller and greener. The point acquisition is done when the target becomes large and green, and a "pop" sound is played. Removing the pointer from the divot then prompts the program to show the next target, if any. Removing the pointer before the point acquisition is done will reset the current target.
+
 ![Calibration](/readme_img/calib.svg)
+
+Once the calibration is over, the actual tests may start but first the phantom needs to be placed at one of the designated locations in the working volume. To help the user in this task, the interface switches to "working volume guidance" by showing a top view of the working volume on the left and a front view on the right. In these views, the user can see where the phantom is located with respect to the target locations, indicated by red spheres. Once the phantom is stabily placed at one of the enabled locations, a particular sound is played and the first test starts.
 
 ![Working volume guidance](/readme_img/wv_guidance.svg)
 

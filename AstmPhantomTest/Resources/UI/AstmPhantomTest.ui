@@ -74,7 +74,7 @@
            <bool>true</bool>
           </property>
           <property name="text">
-           <string>Ground Truth</string>
+           <string>Phantom</string>
           </property>
          </widget>
         </item>
