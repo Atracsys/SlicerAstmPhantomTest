@@ -945,7 +945,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # ---------------------------- Single Point Test -----------------------------
   def startSinglePtTest(self):
     logging.info(f'***** [{self.curLoc}] Single Point Test Start *****')
-    self.singlePointMeasurement.acquiNumMax = 10
+    self.singlePointMeasurement.acquiNumMax = 20
     self.singlePointMeasurement.curLoc = self.curLoc
     self.singlePointMeasurement.measurements[self.curLoc] = np.empty((0,3), float)
     if not self.singleAnn:
