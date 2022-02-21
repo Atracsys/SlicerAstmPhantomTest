@@ -155,9 +155,15 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
 
       # UI connections
-      self.ui.resCamButton.connect('clicked()', self.logic.placeCamWrtPhantom)
+      self.ui.trackerLineEdit.connect('editingFinished()', self.onTrackerIdChanged)
+      self.ui.pointAcqui1frameButton.connect('clicked()', self.onPointAcqui1frameSet)
+      self.ui.pointAcquiMeanButton.connect('clicked()', self.onPointAcquiMeanSet)
+      self.ui.pointAcquiMedianButton.connect('clicked()', self.onPointAcquiMedianSet)
+      self.ui.pointAcquiNumFramesLineEdit.connect('editingFinished()', self.onPointAcquiNumFramesChanged)
+      self.ui.operatorLineEdit.connect('editingFinished()', self.onOperatorIdChanged)
       self.ui.movingTolSlider.connect('sliderMoved(int)', self.onMovingTolSliderMoved)
       self.ui.movingTolSlider.connect('sliderReleased()', self.onMovingTolSliderReleased)
+
       self.ui.testCheckBox1.connect('stateChanged(int)', self.onTestCheckBox1Changed)
       self.ui.testCheckBox2.connect('stateChanged(int)', self.onTestCheckBox2Changed)
       self.ui.testCheckBox3.connect('stateChanged(int)', self.onTestCheckBox3Changed)
@@ -168,8 +174,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.locCheckBoxPL.connect('stateChanged(int)', self.onLocCheckBoxPLChanged)
       self.ui.locCheckBoxPBK.connect('stateChanged(int)', self.onLocCheckBoxPBKChanged)
       self.ui.locCheckBoxPBT.connect('stateChanged(int)', self.onLocCheckBoxPBTChanged)
-      self.ui.operatorLineEdit.connect('editingFinished()', self.onOperatorIdChanged)
-      self.ui.trackerLineEdit.connect('editingFinished()', self.onTrackerIdChanged)
+      self.ui.resCamButton.connect('clicked()', self.logic.placeCamWrtPhantom)
 
       self.ui.hackCalibButton.connect('clicked()', self.hackCalib)
       self.ui.hackPCButton.connect('clicked()', self.hackPC)
@@ -178,6 +183,9 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.hackPBKButton.connect('clicked()', self.hackPBK)
       self.ui.hackPBTButton.connect('clicked()', self.hackPBT)
       # self.ui.hackXButton.connect('clicked()', some callable function)
+
+      self.intval = qt.QIntValidator(1,999) # input validator for point acqui line edit
+      self.ui.pointAcquiNumFramesLineEdit.setValidator(self.intval)
 
       # Add observers for custom events
       self.logic.pointer.AddObserver(self.logic.pointer.movingTolChanged,
@@ -241,10 +249,10 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         else:
           logging.info("PointConnector: all required transform nodes found, lets process!")
           self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
-          # Selector call since combobox already selected first item
+          # Selectors call since combobox already selected first item in each
+          self.onPointerFileChanged()
+          self.onWorkingVolumeFileChanged()
           self.onGroundTruthFileChanged()
-          # Add observer for tracking quality
-          self.logic.pointer.AddObserver(self.logic.pointer.tiltEvent, self.onPointerTiltChanged)
 
   def onPointerFileChanged(self):
     """
@@ -323,6 +331,11 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.pointerFileSelector.enabled = False
     self.ui.workingVolumeFileSelector.enabled = False
     self.ui.groundTruthFileSelector.enabled = False
+    self.ui.pointAcqui1frameButton.enabled = False
+    self.ui.pointAcquiMeanButton.enabled = False
+    self.ui.pointAcquiMedianButton.enabled = False
+    self.ui.pointAcquiNumFramesLineEdit.enabled = False
+    self.ui.pointAcquiFramesLabel.enabled = False
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onPhantomCalibrated(self, caller, event = None, calldata = None):
@@ -449,6 +462,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     opId = self.ui.operatorLineEdit.text
     if opId != "" and opId != self.logic.operatorId: # not empty and not the same
       if not self.logic.operatorId: # if the first time
+        # Enable locations checkboxes
         self.ui.locCheckBoxPC.enabled = self.ui.locCheckBoxPC.checked
         self.ui.locCheckBoxPR.enabled = self.ui.locCheckBoxPR.checked
         self.ui.locCheckBoxPL.enabled = self.ui.locCheckBoxPL.checked
@@ -486,9 +500,38 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.workingVolumeFileSelector.enabled = True
         self.ui.groundTruthFileSelector.enabled = True
         self.ui.operatorLineEdit.enabled = True
+        # Enable point acquisition parametrization
+        self.ui.pointAcqui1frameButton.enabled = True
+        self.ui.pointAcquiMeanButton.enabled = True
+        self.ui.pointAcquiMedianButton.enabled = True
+        self.ui.pointAcquiNumFramesLineEdit.text = str(self.logic.pointer.numFrames)
 
     self.logic.trackerId = tk
     logging.info(f"Tracker Serial Number: {self.logic.trackerId}")
+
+  def onPointAcqui1frameSet(self):
+    self.ui.pointAcquiNumFramesLineEdit.enabled = False
+    self.ui.pointAcquiFramesLabel.enabled = False
+    self.logic.pointer.acquiMode = 0
+    logging.info("Point acquisition set to 1-frame")
+  
+  def onPointAcquiMeanSet(self):
+    self.ui.pointAcquiNumFramesLineEdit.enabled = True
+    self.ui.pointAcquiFramesLabel.enabled = True
+    self.logic.pointer.acquiMode = 1
+    logging.info(f"Point acquisition set to MEAN across {self.logic.pointer.numFrames} frames")
+
+  def onPointAcquiMedianSet(self):
+    self.ui.pointAcquiNumFramesLineEdit.enabled = True
+    self.ui.pointAcquiFramesLabel.enabled = True
+    self.logic.pointer.acquiMode = 2
+    logging.info(f"Point acquisition set to MEDIAN across {self.logic.pointer.numFrames} frames")
+
+  def onPointAcquiNumFramesChanged(self):
+    val = int(self.ui.pointAcquiNumFramesLineEdit.text)
+    if val != self.logic.pointer.numFrames:
+      self.logic.pointer.numFrames = val
+      logging.info(f"Number of frames for point acquisition set to {self.logic.pointer.numFrames}")
 
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeAdded(self, caller, event, calldata):
@@ -506,12 +549,13 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
           self.refNode = calledNode
         if calledNode.GetName() == 'PointerToTracker':
           self.ptrNode = calledNode
-      
         if self.ptrNode and self.refNode and self.ptrRefNode:
-          logging.info('onNodeAdded: all required transform nodes added, lets process!')
-          self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
-          # Selector call since combobox already selected first item
-          self.onGroundTruthFileChanged()
+            logging.info('onNodeAdded: all required transform nodes added, lets process!')
+            self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
+            # Selectors call since combobox already selected first item in each
+            self.onPointerFileChanged()
+            self.onWorkingVolumeFileChanged()
+            self.onGroundTruthFileChanged()
 
   def cleanup(self):
     """
@@ -645,6 +689,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.curLoc = "X" # current location in the working volume
 
     self.tests = [[]] # initialization
+    self.testsToDo = []
     # Create all the tests (even if they might not be used)
     #   Single point accuracy and precision test
     self.singlePointMeasurement = SinglePointMeasurement()
@@ -687,16 +732,15 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
     # forward the transforms given by the tracker to the pointer model
     self.pointer.setTransfoNodes(ptrRefTransfoNode, ptrTransfoNode)
-    self.pointer.watchPtrRefTransfoNode()
     # hide pointer model until phantom calibrated
     self.pointer.model.GetDisplayNode().VisibilityOff()
 
     # connections between the targets object (empty for now) and the pointer
     self.pointer.AddObserver(self.pointer.stoppedEvent, self.targets.onTargetFocus)
-    self.pointer.AddObserver(self.pointer.staticProgEvent, self.targets.onTargetIn)
+    self.pointer.AddObserver(self.pointer.acquiProgEvent, self.targets.onTargetIn)
     self.pointer.AddObserver(self.pointer.staticFailEvent, self.targets.onTargetOut)
-    self.pointer.AddObserver(self.pointer.staticDoneEvent, self.targets.onTargetDone)
-    self.pointer.AddObserver(self.pointer.staticDoneOutEvent, self.targets.onTargetDoneOut)
+    self.pointer.AddObserver(self.pointer.acquiDoneEvent, self.targets.onTargetDone)
+    self.pointer.AddObserver(self.pointer.acquiDoneOutEvent, self.targets.onTargetDoneOut)
 
     # This list stores the tests order and if they are enabled
     self.tests = [['single',1], ['yaw',1], ['pitch',1], ['roll',1], ['dist',1]]
@@ -774,6 +818,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   def removeWorkingVolumeTarget(self, targetId):
     self.wvTargetsTop.removeTarget(targetId)
     self.wvTargetsFront.removeTarget(targetId)
+    if not self.wvTargetsTop.targets and len(self.testsToDo) == 0:  # targets empty and tests done
+      self.EndSession()
 
   def readGroundTruthFile(self, path):
     if self.phantom.readGroundTruthFile(path):
@@ -796,7 +842,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.removeAllTargets()  # making sure targets is empty
 
     # start the calibration
-    self.pointer.timerDuration = 1000  # ms
+    self.pointer.timerDuration = 500  # ms
     self.targets.addTarget(self.phantom.lblO, self.phantom.divPos(self.phantom.lblO), True)
     self.targets.addTarget(self.phantom.lblX, self.phantom.divPos(self.phantom.lblX), False)
     self.targets.addTarget(self.phantom.lblY, self.phantom.divPos(self.phantom.lblY), False)
@@ -813,32 +859,38 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     cd = ast.literal_eval(calldata)
     valid = True
     for k in self.phantom.calGtPts:
-      theoDist = np.linalg.norm(self.phantom.gtPts[k] - self.phantom.gtPts[cd[0]])
-      dist = np.linalg.norm(self.phantom.calGtPts[k] - np.array(cd[1:4]))
+      theoDist = Dist(self.phantom.gtPts[k], self.phantom.gtPts[cd[0]])
+      dist = Dist(self.phantom.calGtPts[k], cd[1:4])
       err = abs(theoDist - dist)
       if err > 1.0:
         logging.info(f'   Invalid distance [{k}, {int(cd[0])}] (err = {err:.2f})')
         valid = False
     if valid:
-      self.pointer.startTimer(caller)
+      self.pointer.startAcquiring(caller)
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onCalibrationPointDone(self, caller, event, calldata):
     # play sound
     self.sounds["plop"].play()
+    cd = ast.literal_eval(calldata)  # parse [id, px, py, pz]
+    if cd[0] == self.phantom.lblO:
+      self.phantom.calGtPts[self.phantom.lblO] = np.array(cd[1:4])
+    if cd[0] == self.phantom.lblX:
+      self.phantom.calGtPts[self.phantom.lblX] = np.array(cd[1:4])
+    if cd[0] == self.phantom.lblY:
+      self.phantom.calGtPts[self.phantom.lblY] = np.array(cd[1:4])
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onCalibrationPointDoneOut(self, caller, event, calldata):
-    cd = ast.literal_eval(calldata)
+    cd = ast.literal_eval(calldata)  # parse id
+    if not isinstance(cd, list):
+      cd = [cd]
     if cd[0] == self.phantom.lblO:
       self.targets.removeTarget(self.phantom.lblO)
-      self.phantom.calGtPts[self.phantom.lblO] = np.array(cd[1:4])
     if cd[0] == self.phantom.lblX:
       self.targets.removeTarget(self.phantom.lblX)
-      self.phantom.calGtPts[self.phantom.lblX] = np.array(cd[1:4])
     if cd[0] == self.phantom.lblY:
       self.targets.removeTarget(self.phantom.lblY)
-      self.phantom.calGtPts[self.phantom.lblY] = np.array(cd[1:4])
     # try to calibrate (will skip if not all three corner targets acquired)
     self.phantom.calibrate()
 
@@ -916,14 +968,14 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.workingVolume.RemoveObserver(self.wvgObs1)
     self.wvTargetsTop.proxiDetect = False
     self.wvTargetsTop.RemoveObserver(self.wvgObs2)
-    self.removeWorkingVolumeTarget(self.curLoc)
     self.pointer.setMovingTolerance(self.workingVolume.movingToleranceFromPos(cd[1:4]))
-
     # Initialize tests todo list
     self.testsToDo = []
     for t in self.tests:
       if t[1]:
         self.testsToDo.append(t[0])
+
+    self.removeWorkingVolumeTarget(self.curLoc)
     self.startNextTest()
 
   # ---------------------------- Tests Control -----------------------------
@@ -959,8 +1011,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.placeCamWrtPhantom() # place camera wrt phantom only
 
     self.targets.proxiDetect = True
-    self.pointer.timerDuration = 1000 # ms
-    self.test1Obs1 = self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startTimer)
+    self.pointer.timerDuration = 500 # ms
+    self.test1Obs1 = self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startAcquiring)
     self.test1Obs2 = self.targets.AddObserver(self.targets.targetDoneEvent, self.onSingPtMeasTargetDone)
     self.test1Obs3 = self.targets.AddObserver(self.targets.targetDoneOutEvent, self.onSingPtMeasTargetDoneOut)
 
@@ -1037,7 +1089,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.rotTestAcquiring = False
 
   @vtk.calldata_type(vtk.VTK_STRING)
-  def onRotMeasTargetHit(self, caller, event, calldata):
+  def onRotMeasTargetHit(self, caller, event = None, calldata = None):
     self.pointer.staticConstraint = True
     self.pointer.emitAngles = True
     self.rotTestObs3 = self.pointer.AddObserver(self.pointer.anglesChangedEvent,
@@ -1126,11 +1178,11 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   def startDistTest(self):
     logging.info(f'***** [{self.curLoc}] Multi-point Test Start *****')
     self.targets.proxiDetect = True
-    self.pointer.timerDuration = 1000 # ms
+    self.pointer.timerDuration = 500 # ms
     self.distMeasurement.curLoc = self.curLoc
     self.distMeasurement.measurements[self.curLoc] = {}
 
-    self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startTimer)
+    self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startAcquiring)
     self.targets.AddObserver(self.targets.targetDoneEvent, self.onDistMeasTargetDone)
     self.targets.AddObserver(self.targets.targetDoneOutEvent, self.onDistMeasTargetDoneOut)
     self.distMeasNextDiv()
@@ -1232,6 +1284,15 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.endTime = datetime.now()
     td = self.endTime - self.startTime # time delta
     durStr = f"{td.days*24+td.seconds//3600}h{td.seconds%3600//60}min{td.seconds%60}s"
+    if self.pointer.acquiMode == 0:
+      pointAcquiMode = "1-frame"
+    elif self.pointer.acquiMode == 1:
+      pointAcquiMode = f"Mean ({self.pointer.numFrames} frames)"
+    elif self.pointer.acquiMode == 2:
+      pointAcquiMode = f"Median ({self.pointer.numFrames} frames)"
+    else:
+      pointAcquiMode = "unknown"
+
     obj = json.dumps({"Tracker Serial Number": self.trackerId,
       "Pointer": self.pointer.id,
       "Working Volume": self.workingVolume.id,
@@ -1240,6 +1301,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       "Start date_time": dts,
       "Duration": durStr,
       "Central Divot": self.phantom.centralDivot,
+      "Point acquisition": pointAcquiMode,
       "Calibrated Ground Truth": self.phantom.calGtPts,
       "Single Point Measurements": self.singlePointMeasurement.measurements,
       f"{self.rotMeasurements[0].rotAxisName} Rotation Measurements": self.rotMeasurements[0].measurements,
@@ -1343,6 +1405,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'  <tr><td>Working volume id</td><td>{self.workingVolume.id}</td></tr>\n'
       f'  <tr><td>Phantom id</td><td>{self.phantom.id}</td></tr>\n'
       f'  <tr><td>Central divot id</td><td>{self.phantom.centralDivot}</td></tr>\n'
+      f'  <tr><td>Point acquisition</td><td>{pointAcquiMode}</td></tr>\n'
       f'</table>\n'
       f'\n'
       f'<h3>Single Point Accuracy and Precision Test</h3>\n'

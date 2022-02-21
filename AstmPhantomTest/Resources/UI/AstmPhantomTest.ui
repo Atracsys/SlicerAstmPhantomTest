@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>343</width>
-    <height>358</height>
+    <width>368</width>
+    <height>387</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="vLayoutMain">
@@ -85,7 +85,7 @@
           </property>
          </widget>
         </item>
-        <item row="8" column="0">
+        <item row="9" column="0">
          <widget class="QPushButton" name="resCamButton">
           <property name="enabled">
            <bool>true</bool>
@@ -95,14 +95,14 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="1">
+        <item row="5" column="1">
          <widget class="QLineEdit" name="operatorLineEdit">
           <property name="enabled">
            <bool>false</bool>
           </property>
          </widget>
         </item>
-        <item row="7" column="1">
+        <item row="8" column="1">
          <layout class="QHBoxLayout" name="movingTolLayout">
           <item>
            <widget class="QLabel" name="movingTolValue">
@@ -123,35 +123,35 @@
           </item>
          </layout>
         </item>
-        <item row="7" column="0">
+        <item row="8" column="0">
          <widget class="QLabel" name="movingTolLabel">
           <property name="text">
            <string>Moving tolerance</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="0">
+        <item row="5" column="0">
          <widget class="QLabel" name="operatorLabel">
           <property name="text">
            <string>Operator</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
+        <item row="7" column="0">
          <widget class="QLabel" name="testsLabel">
           <property name="text">
            <string>Tests</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
+        <item row="6" column="0">
          <widget class="QLabel" name="locationsLabel">
           <property name="text">
            <string>Locations</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="1">
+        <item row="7" column="1">
          <layout class="QHBoxLayout" name="testsLayout">
           <item>
            <widget class="QCheckBox" name="testCheckBox1">
@@ -205,7 +205,7 @@
           </item>
          </layout>
         </item>
-        <item row="5" column="1">
+        <item row="6" column="1">
          <layout class="QHBoxLayout" name="locationsLayout">
           <item>
            <widget class="QCheckBox" name="locCheckBoxPC">
@@ -283,6 +283,101 @@
         </item>
         <item row="0" column="1">
          <widget class="QLineEdit" name="trackerLineEdit"/>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="pointAcquiLabel">
+          <property name="text">
+           <string>Point acquisition</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <layout class="QHBoxLayout" name="pointAcquiLayout">
+          <item>
+           <widget class="QRadioButton" name="pointAcqui1frameButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>1-frame</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">pointAcquiButtonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="pointAcquiMeanButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Mean</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">pointAcquiButtonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="pointAcquiMedianButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Median</string>
+            </property>
+            <attribute name="buttonGroup">
+             <string notr="true">pointAcquiButtonGroup</string>
+            </attribute>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="pointAcquiNumFramesLineEdit">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="pointAcquiFramesLabel">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>frames</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="pointAcquiHspacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>
@@ -450,4 +545,7 @@
  </customwidgets>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="pointAcquiButtonGroup"/>
+ </buttongroups>
 </ui>

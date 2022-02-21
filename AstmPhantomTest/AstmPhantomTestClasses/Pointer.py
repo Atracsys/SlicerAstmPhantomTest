@@ -16,7 +16,7 @@ class Pointer(vtk.vtkObject):
   """
   def __init__(self):
     super().__init__()
-    self.id = "XXXXX" # pointer id, typically its serial number (XXXXX)
+    self.id = "XXXXX" # pointer id, typically its serial number
     self.pq = PosQueue(20)  # queue to continuously store the last 20 pointer positions
     self.ptrRefTransfoNode = None
     self.ptrTransfoNode = None
@@ -32,18 +32,22 @@ class Pointer(vtk.vtkObject):
     self.tracking = False
     self.trackingStoppedEvent = vtk.vtkCommand.UserEvent + 4
     self.trackingStartedEvent = vtk.vtkCommand.UserEvent + 5
-    # timer
+    # static and acquisition status
+    self.staticConstraint = False
+    self.staticFailEvent = vtk.vtkCommand.UserEvent + 6
+    self.acquiring = False
+    self.acquiDone = False
+    self.acquiProgEvent = vtk.vtkCommand.UserEvent + 7
+    self.acquiDoneEvent = vtk.vtkCommand.UserEvent + 8
+    self.acquiDoneOutEvent = vtk.vtkCommand.UserEvent + 9
+    # accumulator and timer
+    self.acquiMode = 0  # 0: 1-frame, 1: mean, 2: median
+    self.coordAccumulator = np.array([])  # stores all incoming coordinates during acquisition
+    self.numFrames = 30  # number of successive frames considered in the acquisition of a single point
     self.timer = qt.QTimer()
     self.timerDuration = 0
     self.timer.setInterval(50)  # timer ticks every 50 ms
     self.timer.connect('timeout()', self.staticTimerCallback)
-    # static
-    self.staticDone = False
-    self.staticConstraint = False
-    self.staticProgEvent = vtk.vtkCommand.UserEvent + 6
-    self.staticFailEvent = vtk.vtkCommand.UserEvent + 7
-    self.staticDoneEvent = vtk.vtkCommand.UserEvent + 8
-    self.staticDoneOutEvent = vtk.vtkCommand.UserEvent + 9
     # tilt
     self.monitorTilt = True
     self.maxTilt = 60 # default value
@@ -81,20 +85,16 @@ class Pointer(vtk.vtkObject):
 
   def setTransfoNodes(self, ptrRefTransfoNode, ptrTransfoNode):
     self.ptrRefTransfoNode = ptrRefTransfoNode
-    # apply the ptr from ref transform to the pointer model,
-    # the observer is set watchPtrRefTransfoNode
+    # apply the ptr from ref transform to the pointer model
     self.model.SetAndObserveTransformNodeID(self.ptrRefTransfoNode.GetID())
+    # observe the ptrRef transform
+    self.ptrRefTransfoNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
+          self.onPtrRefTransformModified)
+
     self.ptrTransfoNode = ptrTransfoNode
     # observe the ptr transform
     self.ptrTransfoNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
       self.onPtrTransformModified)
-
-  def watchPtrRefTransfoNode(self, tof = True):
-    if not tof and self.obsId:
-      self.model.RemoveObserver(self.obsId)
-    if tof:
-      self.obsId = self.model.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
-          self.onPtrRefTransformModified)
 
   def readPointerFile(self, path):
     """
@@ -172,7 +172,7 @@ class Pointer(vtk.vtkObject):
       self.stdPtrMat = self.trkRotMat.dot(self.ptrMat[:3,:3].dot(self.ptrRotMat.T))
       # emit tilt value
       if self.monitorTilt:
-        prog = (self.maxTilt-self.tilt())/self.maxTilt # normalize discrepancy from 0° tilt goal
+        prog = (self.maxTilt-self.tilt())/self.maxTilt # normalize discrepancy from 0 deg tilt goal
         self.model.GetDisplayNode().SetColor(1-prog, prog, 0) # color with respect to discrepancy
 
   @vtk.calldata_type(vtk.VTK_STRING)
@@ -192,13 +192,16 @@ class Pointer(vtk.vtkObject):
           self.InvokeEvent(self.movedEvent)
           self.model.GetDisplayNode().SetOpacity(0.4)
           if self.staticConstraint: # pointer needs to be static
-            if self.staticDone: # pointer completed sufficient staticity
-              self.staticDone = False
+            if self.acquiDone: # acquisition done
+              self.acquiDone = False
               self.staticConstraint = False
-              self.InvokeEvent(self.staticDoneOutEvent)
+              self.InvokeEvent(self.acquiDoneOutEvent)
             else:
-              if self.timer.isActive():
-                self.timer.stop()
+              if self.acquiring:
+                self.acquiring = False
+                self.coordAccumulator = np.array([])
+                if self.acquiMode == 0 and self.timer.isActive():
+                  self.timer.stop()
               self.InvokeEvent(self.staticFailEvent)
       else:
         if self.moving:
@@ -206,23 +209,45 @@ class Pointer(vtk.vtkObject):
           self.model.GetDisplayNode().SetOpacity(1.0)
           # emit event with pointer position attached to it as a string
           self.InvokeEvent(self.stoppedEvent, str(self.pq.queue[-1].tolist()))
+        if self.acquiring:
+          if not self.coordAccumulator.any():
+            self.coordAccumulator = np.array([self.pq.queue[-1].tolist()])  # [[]] important for stacking
+          else:
+            self.coordAccumulator = np.append(self.coordAccumulator, [self.pq.queue[-1].tolist()], axis=0)
+          # if not 1-frame acquisition
+          if self.acquiMode != 0:
+            prog = min(np.size(self.coordAccumulator,0)/self.numFrames, 1.0)  # estimate progression (btw 0.0 and 1.0)
+            self.InvokeEvent(self.acquiProgEvent, str(prog))
+            if np.size(self.coordAccumulator,0) == self.numFrames: # if accumulator full
+              self.acquiring = False
+              self.acquiDone = True
+              if self.acquiMode == 1:  # mean
+                p = np.mean(self.coordAccumulator, axis=0)
+              if self.acquiMode == 2:  # median
+                p = np.median(self.coordAccumulator, axis=0)
+              self.coordAccumulator = np.array([])
+              self.InvokeEvent(self.acquiDoneEvent, str(p.tolist()))
 
   @vtk.calldata_type(vtk.VTK_STRING)
-  def startTimer(self, caller, event = None, calldata = None):
+  def startAcquiring(self, caller, event = None, calldata = None):
     if not self.moving:
       self.staticConstraint = True
-      self.maxTicks = int(self.timerDuration / self.timer.interval) + 1
-      self.ticks = 0
-      self.timer.start()
-      logging.info(f'   Timer started for {self.maxTicks} ticks')
+      self.acquiring = True
+      self.coordAccumulator = np.array([])
+      if self.acquiMode == 0:
+        self.maxTicks = int(self.timerDuration / self.timer.interval) + 1
+        self.ticks = 0
+        self.timer.start()
+        logging.info(f'   Timer started for {self.maxTicks} ticks')
 
   def staticTimerCallback(self):
     if not self.moving and self.timer.isActive():
       self.ticks += 1
       prog = min(self.ticks / self.maxTicks, 1.0)  # estimate progression (btw 0.0 and 1.0)
-      cd = np.append(prog, self.pos())  # progression and position into a single list
-      self.InvokeEvent(self.staticProgEvent, str(cd.tolist()))
+      self.InvokeEvent(self.acquiProgEvent, str(prog))
       if prog >= 1:
         self.timer.stop()
-        self.InvokeEvent(self.staticDoneEvent)
-        self.staticDone = True
+        p = self.coordAccumulator[int(np.size(self.coordAccumulator,0)/2)]  # get middle coordinates
+        self.acquiring = False
+        self.acquiDone = True
+        self.InvokeEvent(self.acquiDoneEvent, str(p.tolist()))

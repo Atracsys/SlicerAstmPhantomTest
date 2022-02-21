@@ -86,10 +86,12 @@ class Targets(vtk.vtkObject):
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onTargetIn(self, caller, event, calldata):
+    cd = ast.literal_eval(calldata)
+    if not isinstance(cd, list):
+      cd = [cd]
     if self.lblHit:
-      cd = ast.literal_eval(calldata)  # parsing string into [prog, pos_x, pos_y, pos_z]
       prog = max(min(cd[0], 1.0), 0)  # restrict progress between 0 and 1
-      self.targets[self.lblHit].onTargetIn(prog, cd[1:4])
+      self.targets[self.lblHit].onTargetIn(prog)
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onTargetOut(self, caller, event = None, calldata = None):
@@ -97,16 +99,14 @@ class Targets(vtk.vtkObject):
       logging.info(f'   Target [{self.lblHit}] << Pointer out >>')
       self.targets[self.lblHit].onTargetOut()
       cd = self.lblHit
-      self.lblHit = None
+      self.lblHit = None # reset hit label
       self.InvokeEvent(self.targetOutEvent, str(cd))
 
   @vtk.calldata_type(vtk.VTK_STRING)
-  def onTargetDone(self, caller, event = None, calldata = None):
+  def onTargetDone(self, caller, event, calldata):
     if self.lblHit:
       self.targets[self.lblHit].onTargetDone()
-      # gathering the calldata
-      p = self.targets[self.lblHit].getMedianCoords().tolist() # median
-      # p = self.targets[self.lblHit].getMeanCoords().tolist() # mean
+      p = ast.literal_eval(calldata)  # parsing string into [px, py, pz]
       logging.info(f'   Target [{self.lblHit}] == Done == with {np.around(p,2).tolist()}')
       cd = [self.lblHit] + p
       self.InvokeEvent(self.targetDoneEvent, str(cd))
@@ -114,11 +114,8 @@ class Targets(vtk.vtkObject):
   @vtk.calldata_type(vtk.VTK_STRING)
   def onTargetDoneOut(self, caller, event = None, calldata = None):
     if self.lblHit:
-      # gathering the calldata
-      p = self.targets[self.lblHit].getMedianCoords().tolist() # median
-      # p = self.targets[self.lblHit].getMeanCoords().tolist() # mean
-      logging.info(f'   Target [{self.lblHit}] <= Done and out => with {np.around(p,2).tolist()}')
-      cd = [self.lblHit] + p
+      logging.info(f'   Target [{self.lblHit}] <= Done and out =>')
+      cd = self.lblHit
       self.lblHit = None # reset hit label
       self.InvokeEvent(self.targetDoneOutEvent, str(cd))
 
@@ -135,8 +132,6 @@ class Target():
     self.radius = radius
     self.colorIni = np.array(colorIni)  # RGBA
     self.colorFin = np.array(colorFin)  # RGBA
-    # stores all incoming coordinates for the target
-    self.coordAccumulator = np.array([])
     # sphere pipeline
     self.src = vtk.vtkSphereSource()
     self.src.SetPhiResolution(20)
@@ -164,7 +159,6 @@ class Target():
     self.actor.GetProperty().SetOpacity(self.colorIni[-1])
     self.lblActor.GetTextProperty().SetColor(self.colorIni[:-1])
     self.src.SetRadius(self.radius)
-    self.coordAccumulator = np.array([])
 
   def visible(self, tof):
     self.actor.SetVisibility(tof)
@@ -177,7 +171,7 @@ class Target():
     self.lblActor.SetPosition(self.pos)
     self.lblActor.SetDisplayOffset(0,25)
 
-  def onTargetIn(self, prog, coords):
+  def onTargetIn(self, prog):
     # prog gives the current progress of the target acquisition (between 0.0 and 1.0)
     color = (1-prog)*self.colorIni[:-1] + prog*self.colorFin[:-1]
     opacity = (1-prog)*self.colorIni[-1] + prog*self.colorFin[-1]
@@ -185,11 +179,6 @@ class Target():
     self.actor.GetProperty().SetColor(color)
     self.actor.GetProperty().SetOpacity(opacity)
     self.lblActor.GetTextProperty().SetColor(color)
-    # coords is the current measured coordinates of the target
-    if not self.coordAccumulator.any():
-      self.coordAccumulator = np.array([coords])  # [[]] important for stacking
-    else:
-      self.coordAccumulator = np.append(self.coordAccumulator, [coords], axis=0)
 
   def onTargetOut(self):
     self.reset()
@@ -199,9 +188,3 @@ class Target():
     self.actor.GetProperty().SetOpacity(self.colorFin[-1])
     self.lblActor.GetTextProperty().SetColor(self.colorFin[:-1])
     self.src.SetRadius(self.radius)
-
-  def getMedianCoords(self):
-    return np.mean(self.coordAccumulator, axis=0)
-
-  def getMeanCoords(self):
-    return np.median(self.coordAccumulator, axis=0)
