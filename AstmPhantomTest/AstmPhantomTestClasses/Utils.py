@@ -1,5 +1,6 @@
 import numpy as np
 import vtk, json
+import itertools  # for combinations
 
 #
 # Position queue class
@@ -109,3 +110,36 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
+
+#
+# Distance calculation
+#
+
+def Dist(a,b):
+  return np.linalg.norm(np.array(a) - np.array(b))
+
+#
+# RMS calculation
+#
+
+def RMS(samples):
+  S = np.array(samples)
+  if S.ndim > 1:
+    avg = np.mean(S, axis=0)
+  else:
+    avg = np.mean(S)
+  devs = [Dist(s, avg) for s in S]
+  return np.sqrt(np.mean(np.array(devs)**2))
+
+
+#
+# Span calculation
+#
+
+def Span(samples):
+  # Compute largest distance between two samples
+  span = 0.0
+  for pair in itertools.combinations(np.array(samples),2):
+    span = max(Dist(pair[0], pair[1]), span)
+  return span

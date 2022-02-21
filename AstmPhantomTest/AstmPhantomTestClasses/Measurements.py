@@ -6,6 +6,7 @@ import random
 import slicer  # for error popup
 import itertools  # for combinations of divots
 import json
+from .Utils import Dist, RMS, Span
 
 #
 # Single Point Measurement class
@@ -47,7 +48,7 @@ class SinglePointMeasurement(vtk.vtkObject):
       pos.reshape(1,-1), axis=0)
     self.InvokeEvent(self.acquiNumChanged, self.acquiNum)
     if self.acquiNum < self.acquiNumMax:
-      logging.info(f"   {self.acquiNumMax - self.acquiNum} acquisition(s) left"
+      logging.info(f"   {self.acquiNumMax - self.acquiNum} acquisition(s) left "
         f"for central divot #{self.divot}")
     else:
       self.allMeasurements = np.append(self.allMeasurements, self.measurements[self.curLoc], axis=0)
@@ -56,10 +57,11 @@ class SinglePointMeasurement(vtk.vtkObject):
 
   def __accuracyStats(self, measurements):
     if len(measurements) > 0:
-      avg = np.linalg.norm(np.mean(measurements, axis = 0) - self.gtPts[self.divot])
+      # the average vector not the average of errors
+      avg = Dist(np.mean(measurements, axis = 0), self.gtPts[self.divot])
       maxerr = 0
       for m in measurements:
-        maxerr = max(maxerr, np.linalg.norm(m-self.gtPts[self.divot]))
+        maxerr = max(maxerr, Dist(m, self.gtPts[self.divot]))
       return {'num':len(measurements), 'avg err':avg, 'max':maxerr}
     else:
       return {'num':0, 'avg err':0, 'max':0}
@@ -80,15 +82,15 @@ class SinglePointMeasurement(vtk.vtkObject):
 
   def __precisionStats(self, measurements):
     if len(measurements) > 0:
-      # Compute largest distance between two measurements (span)
-      span = 0.0
-      for pair in itertools.combinations(measurements,2):
-        span = max(np.linalg.norm(pair[0] - pair[1]), span)
-      # Compute rms of all distances from mean
-      avg = np.mean(measurements, axis=0)
-      dists = [np.linalg.norm(m - avg) for m in measurements]
-      rms = np.sqrt(np.mean(np.array(dists)**2))
-      return {'num':len(measurements), 'span': span, 'rms': rms}
+      return {'num':len(measurements), 'span': Span(measurements), 'rms': RMS(measurements)}
+    else:
+      return {'num':0, 'span':0, 'rms':0}
+
+  def __precisionStatsAll(self):
+    if len(self.allMeasurements) > 0:
+      # Compute RMS of all rms per location
+      rms = [self.precisionStats[p]['rms'] for p in self.precisionStats]
+      return {'num':len(self.allMeasurements), 'span': Span(self.allMeasurements), 'rms': RMS(rms)}
     else:
       return {'num':0, 'span':0, 'rms':0}
 
@@ -103,7 +105,7 @@ class SinglePointMeasurement(vtk.vtkObject):
         self.precisionStats[self.curLoc] = s
       logging.info(f'¤¤¤¤¤¤ Precision ({s["num"]}): span = {s["span"]:.2f}, rms = {s["rms"]:.2f} ¤¤¤¤¤¤')
       # and update global stats
-      self.precisionStats["ALL"] = self.__precisionStats(self.allMeasurements)
+      self.precisionStats["ALL"] = self.__precisionStatsAll()
 
 #
 # Rotation Measurement class
@@ -112,7 +114,7 @@ class SinglePointMeasurement(vtk.vtkObject):
 class RotationMeasurement(vtk.vtkObject):
 
   def __init__(self, axis = 0):
-    self.angStep = 2.0 # degrees
+    self.angStep = 1.0 # degrees
     self.minAngle = -180
     self.maxAngle = 180
     self.rotAxis = axis # 0: roll, 1: pitch, 2: yaw
@@ -136,20 +138,27 @@ class RotationMeasurement(vtk.vtkObject):
   # Calculate stats on measurements
   def __stats(self, meas):
     if len(meas) > 0:
-      def dist(a,b):
-        return np.linalg.norm(a - b)
       # angle range (smallest and largest)
       rg = [min(meas[:,0]),max(meas[:,0])]
-      # max distance between two samples (span)
-      span = 0
-      for pair in itertools.combinations(meas[:,1:], 2):
-        span = max(dist(pair[0], pair[1]), span)
-      # standard deviation and RMS of deviations
+      # RMS of deviations
       avg = np.mean(meas[:,1:], axis=0)
-      devs = [dist(m, avg) for m in meas[:,1:]]
-      rms = np.sqrt(np.mean(np.array(devs)**2)) # should be same as std
+      devs = [Dist(m, avg) for m in meas[:,1:]]
+      rms = RMS(devs) # should be equal to std of meas
       return {"num":len(meas), "rangeMin":rg[0], "rangeMax":rg[1],
-        "span":span, "rms":rms}
+        "span":Span(meas[:,1:]), "rms":rms}
+    else:
+      return {"num":0, "rangeMin":0, "rangeMax":0, "span":0, "rms":0}
+
+  # Calculate stats for ALL
+  def __statsAll(self):
+    if len(self.allMeasurements) > 0:
+      # angle range (intersection of ranges at every locations)
+      rg = [max([self.stats[p]['rangeMin'] for p in self.stats]),
+        min([self.stats[p]['rangeMax'] for p in self.stats])]
+      # Compute RMS of all rms per location
+      rms = [self.stats[p]['rms'] for p in self.stats]
+      return {'num':len(self.allMeasurements), "rangeMin":rg[0], "rangeMax":rg[1],
+        'span': Span(self.allMeasurements[:,1:]), 'rms': RMS(rms)}
     else:
       return {"num":0, "rangeMin":0, "rangeMax":0, "span":0, "rms":0}
 
@@ -166,7 +175,7 @@ class RotationMeasurement(vtk.vtkObject):
       
       # and update global stats
       self.allMeasurements = np.append(self.allMeasurements, self.measurements[self.curLoc], axis = 0)
-      self.stats["ALL"] = self.__stats(self.allMeasurements)
+      self.stats["ALL"] = self.__statsAll()
 
 #
 # Distances Measurement class
@@ -210,24 +219,23 @@ class DistMeasurement(vtk.vtkObject):
   def __stats(self, errors):
     if len(errors) > 0:
       return {'num':len(errors), 'mean':np.mean(errors), 'min':np.min(errors), \
-        'max':np.max(errors), 'std':np.std(errors), 'rms':np.sqrt(np.mean(np.array(errors)**2))}
+        'max':np.max(errors), 'rms':RMS(errors)}
     else:
-      return {'num':0, 'mean':0, 'min':0, 'max':0, 'std':0, 'rms':0}
+      return {'num':0, 'mean':0, 'min':0, 'max':0, 'rms':0}
         
   def updateDistStats(self):
     # Compute errors
     errors = []
     for kp in itertools.combinations(self.measurements[self.curLoc], 2):
-      gtDist = np.linalg.norm(self.gtPts[kp[0]] - self.gtPts[kp[1]])
-      ptrDist = np.linalg.norm(self.measurements[self.curLoc][kp[0]] -
-        self.measurements[self.curLoc][kp[1]])
+      gtDist = Dist(self.gtPts[kp[0]], self.gtPts[kp[1]])
+      ptrDist = Dist(self.measurements[self.curLoc][kp[0]], self.measurements[self.curLoc][kp[1]])
       errors.append(abs(gtDist - ptrDist))
     
     # Update the stats
     s = self.__stats(errors)
     if len(errors) > 0:
       logging.info(f'¤¤¤¤¤¤ Dist Errors ({s["num"]}): mean = {s["mean"]:.2f}, min = {s["min"]:.2f}, '
-        f'max = {s["max"]:.2f}, std = {s["std"]:.2f}, RMS = {s["rms"]:.2f} ¤¤¤¤¤¤')
+        f'max = {s["max"]:.2f}, RMS = {s["rms"]:.2f} ¤¤¤¤¤¤')
     self.InvokeEvent(self.stats1Changed, str(s))
 
     # if sequence over, store stats
@@ -259,7 +267,7 @@ class DistMeasurement(vtk.vtkObject):
       for k in self.measurements[self.curLoc]:
         p0 = np.append(self.measurements[self.curLoc][k], 1.0)  # adding 1.0 for homogeneous coords
         p1 = transfoMat.MultiplyDoublePoint(p0) # outputs a tuple
-        errors.append(abs(np.linalg.norm(np.array(p1[0:3]) - self.gtPts[k])))
+        errors.append(Dist(p1[0:3], self.gtPts[k]))
 
     # Update the stats
     s = self.__stats(errors)

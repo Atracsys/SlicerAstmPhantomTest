@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import qt
 import ast
+from .Utils import Dist
 
 #
 # Targets class
@@ -67,7 +68,7 @@ class Targets(vtk.vtkObject):
     p = ast.literal_eval(calldata)  # parsing string into [pos_x, pos_y, pos_z]
     if self.proxiDetect:
       for k in self.targets:
-        dist = np.linalg.norm(np.array(p) - self.targets[k].pos)
+        dist = Dist(p, self.targets[k].pos)
         if dist < self.proxiThresh:
           self.lblHit = k
           logging.info(f'   Target [{self.lblHit}]{np.around(self.targets[k].pos,2).tolist()} hit at {np.around(p,2).tolist()}! (d={dist:.2f})')

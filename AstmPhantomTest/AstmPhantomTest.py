@@ -712,15 +712,15 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       O = self.phantom.divPos(self.phantom.lblO)
       X = self.phantom.divPos(self.phantom.lblX)
       Y = self.phantom.divPos(self.phantom.lblY)
-      vx = (X - O)/np.linalg.norm(X - O)
-      vy = (Y - O)/np.linalg.norm(Y - O)
+      vx = (X - O)/Dist(X, O)
+      vy = (Y - O)/Dist(Y, O)
       vz = np.cross(vx, vy)
       rpos = O + camPos[0]*vx + camPos[1]*vy + camPos[2]*vz # real pos
       rcamDir = camDir[0]*vx + camDir[1]*vy + camDir[2]*vz # real cam dir
       rfpt = np.array([np.NaN,np.NaN,np.NaN]) # real focal point (declaration)
       # Caculate the focal point as the intersection of the phantom plane (O,X,Y) and cam direction
       if abs(np.dot(rcamDir, vz)) < 1e-4: # if plane and cam dir parallel
-        rfpt = rpos + rcamDir*np.linalg.norm(O-rpos) # set focal point at reasonable distance
+        rfpt = rpos + rcamDir*Dist(O, rpos) # set focal point at reasonable distance
       else:
         rfpt = rpos + rcamDir*np.dot(O-rpos, vz)/np.dot(rcamDir, vz)
       self.mainCam.SetPosition(rpos)
@@ -1067,7 +1067,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     elif self.curRotAxis == 2:
       self.angleAnn.SetText(2, f"  Roll={cd[0]:.1f}\n  Pitch={cd[1]:.1f}\n>Yaw={cd[2]:.1f}<")
     else:
-      self.angleAnn.SetText(2, '~(°_°)~')
+      self.angleAnn.SetText(2, '~(*_*)~')
     self.rotAng = cd[self.curRotAxis]
     self.rotPos = cd[3:]
     if self.rotTestAcquiring:
@@ -1215,7 +1215,6 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
           f'mean = {self.distMeasurement.distStats["ALL"]["mean"]:.2f}, '
           f'min = {self.distMeasurement.distStats["ALL"]["min"]:.2f}, '
           f'max = {self.distMeasurement.distStats["ALL"]["max"]:.2f}, '
-          f'std = {self.distMeasurement.distStats["ALL"]["std"]:.2f}, '
           f'RMS = {self.distMeasurement.distStats["ALL"]["rms"]:.2f}')
       if "ALL" in self.distMeasurement.regStats:
         keyToEnd(self.distMeasurement.regStats, "ALL")
@@ -1253,7 +1252,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       outfile.write(obj)
       logging.info(f'All measurements written in {jsonPath}')
 
-    # Generating report in markdown
+    # Generating report in HTML
     # Stack all values
     locations = ["ALL", "PC", "PR", "PL", "PBK", "PBT"] # match html order
     def lookup(d, k, locs): # look up key k in dict d at locations locs
@@ -1294,7 +1293,6 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         lookup(self.distMeasurement.distStats,"mean", locations),
         lookup(self.distMeasurement.distStats,"min", locations),
         lookup(self.distMeasurement.distStats,"max", locations),
-        lookup(self.distMeasurement.distStats,"std", locations),
         lookup(self.distMeasurement.distStats,"rms", locations),
         lookup(self.distMeasurement.regStats,"mean", locations),
         lookup(self.distMeasurement.regStats,"min", locations),
@@ -1350,7 +1348,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'<h3>Single Point Accuracy and Precision Test</h3>\n'
       f'This test measures the accuracy and precision of single point acquisition by repeatedly picking the central divot. The number of measurements is reported in the table below.<br>\n'
       f'For accuracy, the errors are the vectors from the corresponding reference point (central divot) to each measurement. The accuracy mean is the length of the average of these vectors. The accuracy max is the length of the longest vector.<br>\n'
-      f'For precision, the deviations are calculated as the distances of all the measurements from their average. The Root Mean Square (RMS) and the maximum of these distances (span) are reported.\n'
+      f'For precision, the maximum distance of between two measurements (span) is reported. Also, the deviations are calculated as the distances of all the measurements from their average. Calculated as such, the Root Mean Square (RMS) of the deviations equates their standard deviation and is reported.\n'
       f'<p>\n'
       f'<table style="max-width: 700px;" class="hide">\n'
       f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>PC</td><td>PR</td><td>PL</td><td>PBK</td><td>PBT</td></tr>\n'
@@ -1360,13 +1358,15 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'  <tr><td>Max</td><td><b>{sv[2][0]}</td><td>{sv[2][1]}</td><td>{sv[2][2]}</td><td>{sv[2][3]}</td><td>{sv[2][4]}</td><td>{sv[2][5]}</td></tr>\n'
       f'  <tr><td rowspan="2">Precision (mm)</td>\n'
       f'      <td>Span</td><td><b>{sv[3][0]}</td><td>{sv[3][1]}</td><td>{sv[3][2]}</td><td>{sv[3][3]}</td><td>{sv[3][4]}</td><td>{sv[3][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{sv[4][0]}</td><td>{sv[4][1]}</td><td>{sv[4][2]}</td><td>{sv[4][3]}</td><td>{sv[4][4]}</td><td>{sv[4][5]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{sv[4][0]}*</td><td>{sv[4][1]}</td><td>{sv[4][2]}</td><td>{sv[4][3]}</td><td>{sv[4][4]}</td><td>{sv[4][5]}</td></tr>\n'
       f'</table>\n'
+      f'* The RMS for <b>ALL</b> is the RMS of the standard deviations (i.e. the RMS) at each location.<br>\n'
       f'\n'
       f'<h3>Rotation Precision Tests</h3>\n'
       f'The rotation tests measure the precision of single point acquisition under various orientations of the pointer. These orientations consists of <b>successive</b> rotations around the roll, pitch and yaw axes of the pointer.<br>\n'
       f'The measurements consist in sampling the position of the pointer every 2° during a rotation. The number of measurements is reported in the table below.<br>\n'
-      f'For each rotation axis (roll, pitch, yaw), the minimum and maximum angles for which tracking is possible are reported, as well as the span (largest distance between two measurements) and the RMS of all deviations.\n'
+      f'For each rotation axis (roll, pitch, yaw), the minimum and maximum angles for which tracking is possible are reported.<br>\n'
+      f'For precision, the maximum distance of between two measurements (span) is reported. Also, the deviations are calculated as the distances of all the measurements from their average. Calculated as such, the Root Mean Square (RMS) of the deviations equates their standard deviation and is reported.\n'
       f'\n'
       f'<h4>{self.rotMeasurements[0].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
@@ -1378,8 +1378,9 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'  <tr><td>Max</td><td><b>{r0v[2][0]}</td><td>{r0v[2][1]}</td><td>{r0v[2][2]}</td><td>{r0v[2][3]}</td><td>{r0v[2][4]}</td><td>{r0v[2][5]}</td></tr>\n'
       f'  <tr><td rowspan="2">Precision (mm)</td>\n'
       f'      <td>Span</td><td><b>{r0v[3][0]}</td><td>{r0v[3][1]}</td><td>{r0v[3][2]}</td><td>{r0v[3][3]}</td><td>{r0v[3][4]}</td><td>{r0v[3][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{r0v[4][0]}</td><td>{r0v[4][1]}</td><td>{r0v[4][2]}</td><td>{r0v[4][3]}</td><td>{r0v[4][4]}</td><td>{r0v[4][5]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{r0v[4][0]}*</td><td>{r0v[4][1]}</td><td>{r0v[4][2]}</td><td>{r0v[4][3]}</td><td>{r0v[4][4]}</td><td>{r0v[4][5]}</td></tr>\n'
       f'</table>\n'
+      f'* The RMS for <b>ALL</b> is the RMS of the standard deviations (i.e. the RMS) at each location.<br>\n'
       f'\n'
       f'<h4>{self.rotMeasurements[1].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
@@ -1391,8 +1392,9 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'  <tr><td>Max</td><td><b>{r1v[2][0]}</td><td>{r1v[2][1]}</td><td>{r1v[2][2]}</td><td>{r1v[2][3]}</td><td>{r1v[2][4]}</td><td>{r1v[2][5]}</td></tr>\n'
       f'  <tr><td rowspan="2">Precision (mm)</td>\n'
       f'      <td>Span</td><td><b>{r1v[3][0]}</td><td>{r1v[3][1]}</td><td>{r1v[3][2]}</td><td>{r1v[3][3]}</td><td>{r1v[3][4]}</td><td>{r1v[3][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{r1v[4][0]}</td><td>{r1v[4][1]}</td><td>{r1v[4][2]}</td><td>{r1v[4][3]}</td><td>{r1v[4][4]}</td><td>{r1v[4][5]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{r1v[4][0]}*</td><td>{r1v[4][1]}</td><td>{r1v[4][2]}</td><td>{r1v[4][3]}</td><td>{r1v[4][4]}</td><td>{r1v[4][5]}</td></tr>\n'
       f'</table>\n'
+      f'* The RMS for <b>ALL</b> is the RMS of the standard deviations (i.e. the RMS) at each location.<br>\n'
       f'\n'
       f'<h4>{self.rotMeasurements[2].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
@@ -1404,29 +1406,29 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'  <tr><td>Max</td><td><b>{r2v[2][0]}</td><td>{r2v[2][1]}</td><td>{r2v[2][2]}</td><td>{r2v[2][3]}</td><td>{r2v[2][4]}</td><td>{r2v[2][5]}</td></tr>\n'
       f'  <tr><td rowspan="2">Precision (mm)</td>\n'
       f'      <td>Span</td><td><b>{r2v[3][0]}</td><td>{r2v[3][1]}</td><td>{r2v[3][2]}</td><td>{r2v[3][3]}</td><td>{r2v[3][4]}</td><td>{r2v[3][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{r2v[4][0]}</td><td>{r2v[4][1]}</td><td>{r2v[4][2]}</td><td>{r2v[4][3]}</td><td>{r2v[4][4]}</td><td>{r2v[4][5]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{r2v[4][0]}*</td><td>{r2v[4][1]}</td><td>{r2v[4][2]}</td><td>{r2v[4][3]}</td><td>{r2v[4][4]}</td><td>{r2v[4][5]}</td></tr>\n'
       f'</table>\n'
+      f'* The RMS for <b>ALL</b> is the RMS of the standard deviations (i.e. the RMS) at each location.<br>\n'
       f'\n'
       f'<h3>Multi-point Accuracy Test</h3>\n'
       f'This test measures the spatial relationship between various acquired points and compare it to the reference values. This can be done in two ways: distances or point cloud registration.<br>\n'
-      f'The distances are calculated for all combinations of pair of points. So, for N points measured, there are N(N-1)/2 distances (e.g. 20 measured points gives 190 distances). For each pair of points, the error is calculated as the difference with the corresponding reference pair in terms of distance. The number of distances and the mean, minimum, maximum, standard deviation and RMS of these errors are reported below.<br>\n'
+      f'The distances are calculated for all combinations of pair of points. So, for N points measured, there are N(N-1)/2 distances (e.g. 20 measured points gives 190 distances). For each pair of points, the error is calculated as the difference with the corresponding reference pair in terms of distance. The number of distances and the mean, minimum, maximum and RMS of these errors are reported below.<br>\n'
       f'The registration is performed between the point clouds from the measurements and from the reference. The mean, minimum, maximum, RMS of the registration residuals are reported below.\n'
       f'<p>\n'
       f'<table style="max-width: 700px;">\n'
       f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>PC</td><td>PR</td><td>PL</td><td>PBK</td><td>PBT</td></tr>\n'
       f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{mv[0][0]}</td><td>{mv[0][1]}</td><td>{mv[0][2]}</td><td>{mv[0][3]}</td><td>{mv[0][4]}</td><td>{mv[0][5]}</td></tr>\n'
-      f'  <tr><td rowspan="6">Distances (mm)</td>\n'
+      f'  <tr><td rowspan="5">Distances (mm)</td>\n'
       f'      <td>Num.</td><td><b>{mv[1][0]}</td><td>{mv[1][1]}</td><td>{mv[1][2]}</td><td>{mv[1][3]}</td><td>{mv[1][4]}</td><td>{mv[1][5]}</td></tr>\n'
       f'  <tr><td>Mean</td><td><b>{mv[2][0]}</td><td>{mv[2][1]}</td><td>{mv[2][2]}</td><td>{mv[2][3]}</td><td>{mv[2][4]}</td><td>{mv[2][5]}</td></tr>\n'
       f'  <tr><td>Min</td><td><b>{mv[3][0]}</td><td>{mv[3][1]}</td><td>{mv[3][2]}</td><td>{mv[3][3]}</td><td>{mv[3][4]}</td><td>{mv[3][5]}</td></tr>\n'
       f'  <tr><td>Max</td><td><b>{mv[4][0]}</td><td>{mv[4][1]}</td><td>{mv[4][2]}</td><td>{mv[4][3]}</td><td>{mv[4][4]}</td><td>{mv[4][5]}</td></tr>\n'
-      f'  <tr><td>Std</td><td><b>{mv[5][0]}</td><td>{mv[5][1]}</td><td>{mv[5][2]}</td><td>{mv[5][3]}</td><td>{mv[5][4]}</td><td>{mv[5][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{mv[6][0]}</td><td>{mv[6][1]}</td><td>{mv[6][2]}</td><td>{mv[6][3]}</td><td>{mv[6][4]}</td><td>{mv[6][5]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{mv[5][0]}</td><td>{mv[5][1]}</td><td>{mv[5][2]}</td><td>{mv[5][3]}</td><td>{mv[5][4]}</td><td>{mv[5][5]}</td></tr>\n'
       f'  <tr><td rowspan="4">Registration (mm)</td>\n'
-      f'      <td>Mean</td><td><b>{mv[7][0]}</td><td>{mv[7][1]}</td><td>{mv[7][2]}</td><td>{mv[7][3]}</td><td>{mv[7][4]}</td><td>{mv[7][5]}</td></tr>\n'
-      f'  <tr><td>Min</td><td><b>{mv[8][0]}</td><td>{mv[8][1]}</td><td>{mv[8][2]}</td><td>{mv[8][3]}</td><td>{mv[8][4]}</td><td>{mv[8][5]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{mv[9][0]}</td><td>{mv[9][1]}</td><td>{mv[9][2]}</td><td>{mv[9][3]}</td><td>{mv[9][4]}</td><td>{mv[9][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{mv[10][0]}</td><td>{mv[10][1]}</td><td>{mv[10][2]}</td><td>{mv[10][3]}</td><td>{mv[10][4]}</td><td>{mv[10][5]}</td></tr>\n'
+      f'      <td>Mean</td><td><b>{mv[6][0]}</td><td>{mv[6][1]}</td><td>{mv[6][2]}</td><td>{mv[6][3]}</td><td>{mv[6][4]}</td><td>{mv[6][5]}</td></tr>\n'
+      f'  <tr><td>Min</td><td><b>{mv[7][0]}</td><td>{mv[7][1]}</td><td>{mv[7][2]}</td><td>{mv[7][3]}</td><td>{mv[7][4]}</td><td>{mv[7][5]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{mv[8][0]}</td><td>{mv[8][1]}</td><td>{mv[8][2]}</td><td>{mv[8][3]}</td><td>{mv[8][4]}</td><td>{mv[8][5]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{mv[9][0]}</td><td>{mv[9][1]}</td><td>{mv[9][2]}</td><td>{mv[9][3]}</td><td>{mv[9][4]}</td><td>{mv[9][5]}</td></tr>\n'
       f'</table>\n'
       f'</div>\n'
       f'</body>\n'
