@@ -24,9 +24,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="7.9195959"
-     inkscape:cx="403.55282"
-     inkscape:cy="201.36266"
+     inkscape:zoom="1.4"
+     inkscape:cx="365.01652"
+     inkscape:cy="245.33648"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
@@ -34,9 +34,9 @@
      inkscape:snap-midpoints="true"
      inkscape:object-paths="true"
      inkscape:window-width="1565"
-     inkscape:window-height="1198"
+     inkscape:window-height="1194"
      inkscape:window-x="182"
-     inkscape:window-y="182"
+     inkscape:window-y="186"
      inkscape:window-maximized="0"
      fit-margin-top="5"
      fit-margin-right="5"
@@ -89,7 +89,7 @@
              id="tspan1446-3-3-7-4"
              x="74.6399"
              y="9.0273142"
-             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ff0000;stroke-width:0.430277">6</tspan></text>
+             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ff0000;stroke-width:0.430277">7</tspan></text>
         <circle
            style="fill:none;stroke:#ff0101;stroke-width:0.61147;stroke-linejoin:round"
            id="path1452-3-5-35-7"
@@ -141,7 +141,7 @@
              id="tspan1446-3-3-7-4-2"
              x="74.6399"
              y="9.0273142"
-             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ff0000;stroke-width:0.430277">7</tspan></text>
+             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ff0000;stroke-width:0.430277">8</tspan></text>
         <circle
            style="fill:none;stroke:#ff0101;stroke-width:0.61147;stroke-linejoin:round"
            id="path1452-3-5-35-7-4"
@@ -185,7 +185,7 @@
              id="tspan1446-3-3-7-4-2-7"
              x="74.6399"
              y="9.0273142"
-             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ff0000;stroke-width:0.430277">8</tspan></text>
+             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ff0000;stroke-width:0.430277">9</tspan></text>
         <circle
            style="fill:none;stroke:#ff0101;stroke-width:0.61147;stroke-linejoin:round"
            id="path1452-3-5-35-7-4-7"
@@ -213,15 +213,15 @@
          transform="translate(97.598139,9.48982)">
         <text
            xml:space="preserve"
-           style="font-size:11.4741px;line-height:1.25;font-family:sans-serif;stroke-width:0.430277"
-           x="74.6399"
-           y="9.0273142"
+           style="font-size:9.74105px;line-height:1.25;font-family:sans-serif;stroke-width:0.365288"
+           x="72.374931"
+           y="8.4798126"
            id="text1448-1-7-9-2-7-6-5"><tspan
              sodipodi:role="line"
              id="tspan1446-3-3-7-4-2-7-7"
-             x="74.6399"
-             y="9.0273142"
-             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ff0000;stroke-width:0.430277">9</tspan></text>
+             x="72.374931"
+             y="8.4798126"
+             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Calibri;-inkscape-font-specification:'Calibri Bold';fill:#ff0000;stroke-width:0.365288">10</tspan></text>
         <circle
            style="fill:none;stroke:#ff0101;stroke-width:0.61147;stroke-linejoin:round"
            id="path1452-3-5-35-7-4-7-2"
