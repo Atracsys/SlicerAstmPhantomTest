@@ -1427,7 +1427,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'\n'
       f'<h3>Rotation Precision Tests</h3>\n'
       f'The rotation tests measure the precision of single point acquisition under various orientations of the pointer. These orientations consists of <b>successive</b> rotations around the roll, pitch and yaw axes of the pointer.<br>\n'
-      f'The measurements consist in sampling the position of the pointer every 2° during a rotation. The number of measurements is reported in the table below.<br>\n'
+      f'The measurements consist in sampling the position of the pointer every 1° during a rotation. The number of measurements is reported in the table below.<br>\n'
       f'For each rotation axis (roll, pitch, yaw), the minimum and maximum angles for which tracking is possible are reported.<br>\n'
       f'For precision, the maximum distance of between two measurements (span) is reported. Also, the deviations are calculated as the distances of all the measurements from their average. Calculated as such, the Root Mean Square (RMS) of the deviations equates their standard deviation and is reported.\n'
       f'\n'
