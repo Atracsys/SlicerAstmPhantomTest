@@ -298,7 +298,7 @@ To start the actual measurements, the user must first rotate the pointer as deta
 
 This routine is to be repeated for each axis corresponding to the [enabled rotation tests](#enableTests) in the parameter panel.
 
-|<a name="artifOutOfTracking"></a>Certain rotations may lead to the pointer colliding with parts of the phantom or escaping the divot before it gets out of tracking. It is preferable to prematurly stop the measurements (and hence the rotation test) slightly before reaching these dead-ends. To artificially set the pointer out of tracking, swiftly fully occlude the pointer to the tracker or "spin it away" while remaining in the central divot.
+|<a name="artifOutOfTracking"></a>Certain rotations may lead to the pointer colliding with parts of the phantom or escaping the divot before it gets out of tracking. It is preferable to prematurly stop the measurements (and hence the rotation test) slightly before reaching these dead-ends. To artificially set the pointer out of tracking, swiftly occlude the pointer with the hand while remaining in the central divot.
 |---|
 
 ![Rotation test](/readme_img/tests_rotation.png)
