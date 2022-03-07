@@ -125,13 +125,21 @@ def Dist(a,b):
 
 def RMS(samples):
   S = np.array(samples)
+  return np.sqrt(np.mean(np.array(S)**2))
+
+#
+# Standard deviation of 3D coordinates
+# based on distance
+#
+
+def stdDist(coords):
+  S = np.array(coords)
   if S.ndim > 1:
     avg = np.mean(S, axis=0)
   else:
     avg = np.mean(S)
   devs = [Dist(s, avg) for s in S]
   return np.sqrt(np.mean(np.array(devs)**2))
-
 
 #
 # Span calculation

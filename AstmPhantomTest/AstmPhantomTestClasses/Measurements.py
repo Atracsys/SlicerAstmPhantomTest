@@ -6,7 +6,7 @@ import random
 import slicer  # for error popup
 import itertools  # for combinations of divots
 import json
-from .Utils import Dist, RMS, Span
+from .Utils import Dist, RMS, Span, stdDist
 
 #
 # Single Point Measurement class
@@ -57,12 +57,12 @@ class SinglePointMeasurement(vtk.vtkObject):
 
   def __accuracyStats(self, measurements):
     if len(measurements) > 0:
-      # the average vector not the average of errors
-      avg = Dist(np.mean(measurements, axis = 0), self.gtPts[self.divot])
+      # the length of the average error vector, not the average of errors
+      err = Dist(np.mean(measurements, axis = 0), self.gtPts[self.divot])
       maxerr = 0
       for m in measurements:
         maxerr = max(maxerr, Dist(m, self.gtPts[self.divot]))
-      return {'num':len(measurements), 'avg err':avg, 'max':maxerr}
+      return {'num':len(measurements), 'avg err':err, 'max':maxerr}
     else:
       return {'num':0, 'avg err':0, 'max':0}
 
@@ -82,15 +82,16 @@ class SinglePointMeasurement(vtk.vtkObject):
 
   def __precisionStats(self, measurements):
     if len(measurements) > 0:
-      return {'num':len(measurements), 'span': Span(measurements), 'rms': RMS(measurements)}
+      # stdDist = RMS of deviations from mean
+      return {'num':len(measurements), 'span': Span(measurements), 'rms': stdDist(measurements)}
     else:
       return {'num':0, 'span':0, 'rms':0}
 
   def __precisionStatsAll(self):
     if len(self.allMeasurements) > 0:
       # Compute RMS of all rms per location
-      rms = [self.precisionStats[p]['rms'] for p in self.precisionStats]
-      return {'num':len(self.allMeasurements), 'span': Span(self.allMeasurements), 'rms': RMS(rms)}
+      rmss = [self.precisionStats[p]['rms'] for p in self.precisionStats]
+      return {'num':len(self.allMeasurements), 'span': Span(self.allMeasurements), 'rms': RMS(rmss)}
     else:
       return {'num':0, 'span':0, 'rms':0}
 
@@ -141,9 +142,7 @@ class RotationMeasurement(vtk.vtkObject):
       # angle range (smallest and largest)
       rg = [min(meas[:,0]),max(meas[:,0])]
       # RMS of deviations
-      avg = np.mean(meas[:,1:], axis=0)
-      devs = [Dist(m, avg) for m in meas[:,1:]]
-      rms = RMS(devs) # should be equal to std of meas
+      rms = stdDist(meas[:,1:])
       return {"num":len(meas), "rangeMin":rg[0], "rangeMax":rg[1],
         "span":Span(meas[:,1:]), "rms":rms}
     else:
@@ -156,9 +155,9 @@ class RotationMeasurement(vtk.vtkObject):
       rg = [max([self.stats[p]['rangeMin'] for p in self.stats]),
         min([self.stats[p]['rangeMax'] for p in self.stats])]
       # Compute RMS of all rms per location
-      rms = [self.stats[p]['rms'] for p in self.stats]
+      rmss = [self.stats[p]['rms'] for p in self.stats]
       return {'num':len(self.allMeasurements), "rangeMin":rg[0], "rangeMax":rg[1],
-        'span': Span(self.allMeasurements[:,1:]), 'rms': RMS(rms)}
+        'span': Span(self.allMeasurements[:,1:]), 'rms': RMS(rmss)}
     else:
       return {"num":0, "rangeMin":0, "rangeMax":0, "span":0, "rms":0}
 
