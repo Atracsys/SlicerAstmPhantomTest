@@ -175,7 +175,7 @@ class WorkingVolume(vtk.vtkObject):
             self.yawAxis = p
 
     # Setup cameras for working volume guidance
-    mag = self.locs['PBK'][2] # magnitude of the depth of the working volume
+    mag = abs(self.locs['PBK'][2]) # magnitude of the depth of the working volume
     # Top view of the working volume
     self.renTop.GetActiveCamera().SetPosition((self.locs['PC'] + 2*mag*self.yawAxis).tolist())
     # initialize the cam far enough
