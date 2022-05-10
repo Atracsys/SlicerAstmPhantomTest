@@ -169,6 +169,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.testCheckBox3.connect('stateChanged(int)', self.onTestCheckBox3Changed)
       self.ui.testCheckBox4.connect('stateChanged(int)', self.onTestCheckBox4Changed)
       self.ui.testCheckBox5.connect('stateChanged(int)', self.onTestCheckBox5Changed)
+      self.ui.testCheckBox6.connect('stateChanged(int)', self.onTestCheckBox6Changed)
       self.ui.locCheckBoxPC.connect('stateChanged(int)', self.onLocCheckBoxPCChanged)
       self.ui.locCheckBoxPR.connect('stateChanged(int)', self.onLocCheckBoxPRChanged)
       self.ui.locCheckBoxPL.connect('stateChanged(int)', self.onLocCheckBoxPLChanged)
@@ -402,6 +403,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.testCheckBox3.text = names[2]
     self.ui.testCheckBox4.text = names[3]
     self.ui.testCheckBox5.text = names[4]
+    self.ui.testCheckBox6.text = names[5]
 
   def onTestCheckBox1Changed(self, val):
     self.logic.tests[0][1] = val
@@ -417,6 +419,9 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   
   def onTestCheckBox5Changed(self, val):
     self.logic.tests[4][1] = val
+
+  def onTestCheckBox6Changed(self, val):
+    self.logic.tests[5][1] = val
   
   def onLocCheckBoxPCChanged(self, val):
     if val:
@@ -693,6 +698,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     # Create all the tests (even if they might not be used)
     #   Single point accuracy and precision test
     self.singlePointMeasurement = SinglePointMeasurement()
+    self.staticSinglePointMeasurement = SinglePointMeasurement()
     self.singleAnn = None
     #   Precision during rotation tests (0 = roll, 1 = pitch, 2 = yaw)
     self.rotMeasurements = [RotationMeasurement(0), RotationMeasurement(1), RotationMeasurement(2)]
@@ -743,7 +749,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.pointer.AddObserver(self.pointer.acquiDoneOutEvent, self.targets.onTargetDoneOut)
 
     # This list stores the tests order and if they are enabled
-    self.tests = [['single',1], ['yaw',1], ['pitch',1], ['roll',1], ['dist',1]]
+    self.tests = [['single',1], ['static',1], ['yaw',1], ['pitch',1], ['roll',1], ['dist',1]]
     self.InvokeEvent(self.testNamesUpdated, str([t[0] for t in self.tests]))
 
     # time beginning of process
@@ -907,6 +913,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       # new calib => new calibrated ground truth for the accuracy measurements
       if self.singlePointMeasurement:
         self.singlePointMeasurement.fullReset(self.phantom.calGtPts, self.phantom.centralDivot)
+      if self.staticSinglePointMeasurement:
+        self.staticSinglePointMeasurement.fullReset(self.phantom.calGtPts, self.phantom.centralDivot)
       if self.distMeasurement:
         self.distMeasurement.fullReset(self.phantom.calGtPts, self.phantom.seq)
       # but also reset rotation measurements then
@@ -985,6 +993,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     else:
       if self.testsToDo[0] == 'single':
         self.startSinglePtTest()
+      if self.testsToDo[0] == 'static':
+        self.startStaticSinglePtTest()
       if self.testsToDo[0] == 'roll':
         self.startRotationTest(0)
       if self.testsToDo[0] == 'pitch':
@@ -994,7 +1004,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       if self.testsToDo[0] == 'dist':
         self.startDistTest()
 
-  # ---------------------------- Single Point Test -----------------------------
+# ---------------------------- Single Point Test -----------------------------
   def startSinglePtTest(self):
     logging.info(f'***** [{self.curLoc}] Single Point Test Start *****')
     self.singlePointMeasurement.acquiNumMax = 20
@@ -1057,6 +1067,66 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.RemoveObserver(self.test1Obs3)
     # Reset
     self.singlePointMeasurement.reset()
+    self.testsToDo.pop(0) # remove the test
+    self.startNextTest()
+
+  # ---------------------------- Static Single Point Test -----------------------------
+  def startStaticSinglePtTest(self):
+    logging.info(f'***** [{self.curLoc}] Static Single Point Test Start *****')
+    self.staticSinglePointMeasurement.acquiNumMax = 90
+    self.staticSinglePointMeasurement.curLoc = self.curLoc
+    self.staticSinglePointMeasurement.measurements[self.curLoc] = np.empty((0,3), float)
+    if not self.singleAnn:
+      self.singleAnn = vtk.vtkCornerAnnotation()
+      self.singleAnn.GetTextProperty().SetFontSize(180)
+      self.singleAnn.SetLinearFontScaleFactor(20)
+      self.singleAnn.GetTextProperty().SetColor(1,0,0)
+      self.singleAnn.GetTextProperty().BoldOn()
+      self.singleAnn.GetTextProperty().ShadowOn()
+    self.mainRenderer.AddActor(self.singleAnn)
+    self.placeCamWrtPhantom() # place camera wrt phantom only
+
+    self.targets.proxiDetect = True
+    self.pointer.timerDuration = 500 # ms
+    self.test1Obs1 = self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startAcquiring)
+    self.test1Obs2 = self.targets.AddObserver(self.targets.targetDoneEvent, self.onStaticSingPtMeasTargetDone)
+
+    self.singleAnn.SetText(3, str(self.staticSinglePointMeasurement.acquiNum)
+        + "/" + str(self.staticSinglePointMeasurement.acquiNumMax)) # 3 = top right
+    
+    gtpos = self.phantom.divPos(self.staticSinglePointMeasurement.divot)
+    self.targets.addTarget(self.staticSinglePointMeasurement.divot, gtpos, True)
+
+  def staticSingPtMeasNext(self):
+    if self.staticSinglePointMeasurement.acquiNum < self.staticSinglePointMeasurement.acquiNumMax:
+      self.targets.InvokeEvent(self.targets.targetHitEvent)
+    else:
+      # play sound
+      self.sounds["done"].play()
+      self.stopStaticSinglePtTest()
+
+  @vtk.calldata_type(vtk.VTK_STRING)
+  def onStaticSingPtMeasTargetDone(self, caller, event, calldata):
+    cd = ast.literal_eval(calldata)
+    lblHit = int(cd[0])
+    pos = np.array(cd[1:4])
+    if lblHit == self.phantom.centralDivot:  # just a verification
+      self.staticSinglePointMeasurement.onDivDone(pos)
+      # play sound
+      self.sounds["plop"].play()
+      self.singleAnn.SetText(3, str(self.staticSinglePointMeasurement.acquiNum)
+        + "/" + str(self.staticSinglePointMeasurement.acquiNumMax)) # 3 = top right
+      self.staticSingPtMeasNext()
+
+  def stopStaticSinglePtTest(self):
+    logging.info(f'----- [{self.curLoc}] Static Single Point Test Stop -----')
+    self.mainRenderer.RemoveActor(self.singleAnn)
+    self.targets.proxiDetect = False
+    self.targets.removeAllTargets()
+    self.targets.RemoveObserver(self.test1Obs1)
+    self.targets.RemoveObserver(self.test1Obs2)
+    # Reset
+    self.staticSinglePointMeasurement.reset()
     self.testsToDo.pop(0) # remove the test
     self.startNextTest()
 
@@ -1304,6 +1374,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       "Point acquisition": pointAcquiMode,
       "Calibrated Ground Truth": self.phantom.calGtPts,
       "Single Point Measurements": self.singlePointMeasurement.measurements,
+      "Static Single Point Measurements": self.staticSinglePointMeasurement.measurements,
       f"{self.rotMeasurements[0].rotAxisName} Rotation Measurements": self.rotMeasurements[0].measurements,
       f"{self.rotMeasurements[1].rotAxisName} Rotation Measurements": self.rotMeasurements[1].measurements,
       f"{self.rotMeasurements[2].rotAxisName} Rotation Measurements": self.rotMeasurements[2].measurements,

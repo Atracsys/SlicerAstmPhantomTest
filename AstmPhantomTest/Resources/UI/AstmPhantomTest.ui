@@ -203,6 +203,16 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="testCheckBox6">
+            <property name="text">
+             <string>6</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
         <item row="6" column="1">

@@ -47,6 +47,10 @@ class WorkingVolumeActor(vtk.vtkActor):
     
     self.meshPolyData.SetPoints(nodes)
     self.meshPolyData.SetPolys(polys)
+    # writer = vtk.vtkXMLPolyDataWriter()
+    # writer.SetFileName("D:\mesh.vtp")
+    # writer.SetInputData(self.meshPolyData)
+    # writer.Write()
 
     # Edges
     lines = vtk.vtkCellArray()
@@ -63,6 +67,10 @@ class WorkingVolumeActor(vtk.vtkActor):
 
     self.edgesPolyData.SetPoints(nodes)
     self.edgesPolyData.SetLines(lines)
+
+    # writer.SetFileName("D:\edges.vtp")
+    # writer.SetInputData(self.edgesPolyData)
+    # writer.Write()
 
 #
 # Working Volume class
