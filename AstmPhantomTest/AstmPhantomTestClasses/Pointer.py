@@ -78,6 +78,7 @@ class Pointer(vtk.vtkObject):
     if self.model == None:
       self.model = slicer.util.loadModel(path)
       self.model.SetName('PointerModel')
+      self.model.GetDisplayNode().VisibilityOff()
 
   def setMovingTolerance(self, val):
     self.movingTol = val

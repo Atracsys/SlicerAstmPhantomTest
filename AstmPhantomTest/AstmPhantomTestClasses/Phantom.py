@@ -55,6 +55,7 @@ class Phantom(vtk.vtkObject):
       self.model = slicer.util.loadModel(self.modelPath)
       self.model.SetName('PhantomModel')
       self.model.GetDisplayNode().SetColor(0,0.8,1.0)
+      self.model.GetDisplayNode().VisibilityOff()
 
   def readGroundTruthFile(self, path):
     """

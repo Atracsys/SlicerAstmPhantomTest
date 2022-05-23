@@ -29,7 +29,7 @@ class AstmPhantomTest(ScriptedLoadableModule):
     self.parent.dependencies = ["OpenIGTLinkIF"]
     self.parent.contributors = ["Sylvain Bernhardt (Atracsys LLC)"]
     self.parent.helpText = """
-This module is a tool to perform the tracking accuracy tests as described in the ASTM standard F2554.
+This module is a tool to perform the tracking accuracy tests as described in the ASTM standard F2554-22.
 It provides visual guidance, navigation and all the statistical analysis.
 For more information about the module and its usage, please refer to the <a href="https://github.com/Atracsys/astm-phantom-test">home page</a>.
 """
@@ -37,7 +37,7 @@ For more information about the module and its usage, please refer to the <a href
 This module has been developed by Sylvain Bernhardt, Atracsys LLC. It is based on a scripted module
 template originally developed by Jean-Christophe Fillion-Robin, Kitware Inc., Andras Lasso, PerkLab,
 and Steve Pieper, Isomics, Inc. and was partially funded by NIH grant 3P41RR013218-12S1.
-Thanks a lot to Andras Lasso for his help during the development of this project.
+Thanks a lot to Andras Lasso and his team for his help during the development of this project.
 """
 
 #
@@ -226,33 +226,19 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # Adding the observer watching out for the new transform node after openigtlink connection
       slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onNodeAdded)
 
-      # Open an OpenIGTLink connection if not already opened
-      if slicer.mrmlScene.GetFirstNodeByName('PointerConnector') == None:
-        logging.info('No PointerConnector, lets create one')
-        self.cnode = slicer.vtkMRMLIGTLConnectorNode()
-        self.cnode.SetName('PointerConnector')
-        slicer.mrmlScene.AddNode(self.cnode)
-        if self.cnode.Start() != 1:
-          msg = "PointerConnector: Cannot connect to openIGTLink"
-          logging.error(msg)
-          slicer.util.errorDisplay(msg)
-      else:
-        self.ptrRefNode = slicer.mrmlScene.GetFirstNodeByName('PointerToPhantom')
-        self.refNode = slicer.mrmlScene.GetFirstNodeByName('PhantomToTracker')
-        self.ptrNode = slicer.mrmlScene.GetFirstNodeByName('PointerToTracker')
-        if self.ptrRefNode == None:
-          logging.info('PointConnector: PointerToPhantom node not found')
-        elif self.refNode == None:
-          logging.info('PointConnector: PhantomToTracker node not found')
-        elif self.ptrNode == None:
-          logging.info('PointConnector: PointerToTracker node not found')
-        else:
-          logging.info("PointConnector: all required transform nodes found, lets process!")
-          self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
-          # Selectors call since combobox already selected first item in each
-          self.onPointerFileChanged()
-          self.onWorkingVolumeFileChanged()
-          self.onGroundTruthFileChanged()
+      # Test if OpenIGTLink connection already open
+      testNode = slicer.mrmlScene.GetFirstNodeByName('PointerConnector')
+      if testNode != None: # if so, remove it
+        slicer.mrmlScene.RemoveNode(testNode)
+      # Create OpenIGTLink connection
+      logging.info('Creating PointerConnector')
+      self.cnode = slicer.vtkMRMLIGTLConnectorNode()
+      self.cnode.SetName('PointerConnector')
+      slicer.mrmlScene.AddNode(self.cnode)
+      if self.cnode.Start() != 1:
+        msg = "PointerConnector: Cannot connect to openIGTLink"
+        logging.error(msg)
+        slicer.util.errorDisplay(msg)
 
   def onPointerFileChanged(self):
     """
@@ -540,22 +526,37 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     calledNode = calldata
     logging.info('onNodeAdded: Called for ' + calledNode.GetName())
-    if calledNode.GetName() == 'PointerToPhantom' or \
-      calledNode.GetName() == 'PhantomToTracker' or \
-      calledNode.GetName() == 'PointerToTracker':
-        if calledNode.GetName() == 'PointerToPhantom':
-          self.ptrRefNode = calledNode
-        if calledNode.GetName() == 'PhantomToTracker':
-          self.refNode = calledNode
-        if calledNode.GetName() == 'PointerToTracker':
-          self.ptrNode = calledNode
-        if self.ptrNode and self.refNode and self.ptrRefNode:
-            logging.info('onNodeAdded: all required transform nodes added, lets process!')
-            self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
-            # Selectors call since combobox already selected first item in each
-            self.onPointerFileChanged()
-            self.onWorkingVolumeFileChanged()
-            self.onGroundTruthFileChanged()
+    if calledNode.GetName() == 'PointerToPhantom':
+      self.ptrRefNode = calledNode
+      self.ncPtrRefObs = self.ptrRefNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
+          self.onNodeChanged)
+    if calledNode.GetName() == 'PhantomToTracker':
+        self.refNode = calledNode
+        self.ncRefObs = self.refNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
+          self.onNodeChanged)
+    if calledNode.GetName() == 'PointerToTracker':
+        self.ptrNode = calledNode
+        self.ncPtrObs = self.ptrNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
+          self.onNodeChanged)
+
+  @vtk.calldata_type(vtk.VTK_OBJECT)
+  def onNodeChanged(self, caller, event=None, calldata=None):
+    """
+    Called when a node has changed
+    """
+    if self.ptrNode and self.refNode and self.ptrRefNode:
+      if self.ptrNode.GetAttribute("TransformStatus") == "OK"  and \
+      self.refNode.GetAttribute("TransformStatus") == "OK" and \
+      self.ptrRefNode.GetAttribute("TransformStatus") == "OK":
+        self.ptrNode.RemoveObserver(self.ncPtrObs)
+        self.refNode.RemoveObserver(self.ncRefObs)
+        self.ptrRefNode.RemoveObserver(self.ncPtrRefObs)
+        logging.info('onNodeChanged: all required transform nodes are valid, let\'s process!')
+        self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
+        # Selectors call since combobox already selected first item in each
+        self.onPointerFileChanged()
+        self.onWorkingVolumeFileChanged()
+        self.onGroundTruthFileChanged()
 
   def cleanup(self):
     """
@@ -733,7 +734,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     # forward the transforms given by the tracker to the pointer model
     self.pointer.setTransfoNodes(ptrRefTransfoNode, ptrTransfoNode)
     # hide pointer model until phantom calibrated
-    self.pointer.model.GetDisplayNode().VisibilityOff()
+    self.phantom.model.GetDisplayNode().VisibilityOn()
 
     # connections between the targets object (empty for now) and the pointer
     self.pointer.AddObserver(self.pointer.stoppedEvent, self.targets.onTargetFocus)
