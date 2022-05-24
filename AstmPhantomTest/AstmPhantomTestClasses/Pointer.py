@@ -62,6 +62,7 @@ class Pointer(vtk.vtkObject):
     self.ptrRollAxis = [0,0,-1]
     self.ptrPitchAxis = [-1,0,0]
     self.ptrYawAxis = [0,1,0]
+    self.modelTransfoNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLLinearTransformNode', 'ptrModelTransfo')
     # init matrices to identity
     self.ptrRefMat = np.identity(4)
     self.ptrMat = np.identity(4)
@@ -85,9 +86,11 @@ class Pointer(vtk.vtkObject):
     self.InvokeEvent(self.movingTolChanged, str(val))
 
   def setTransfoNodes(self, ptrRefTransfoNode, ptrTransfoNode):
+    # apply transformation to the model according to rotation axes
+    self.model.SetAndObserveTransformNodeID(self.modelTransfoNode.GetID())
+    # apply the ptr from ref transform to the pointer model in post-multiply
     self.ptrRefTransfoNode = ptrRefTransfoNode
-    # apply the ptr from ref transform to the pointer model
-    self.model.SetAndObserveTransformNodeID(self.ptrRefTransfoNode.GetID())
+    self.modelTransfoNode.SetAndObserveTransformNodeID(self.ptrRefTransfoNode.GetID())
     # observe the ptrRef transform
     self.ptrRefTransfoNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
           self.onPtrRefTransformModified)
@@ -102,6 +105,8 @@ class Pointer(vtk.vtkObject):
     Reads and parse the orientation of the pointer standard axes
     """
     logging.info('Read pointer file')
+    self.id = os.path.basename(path).split('.txt')[0] # retrieve filename only
+    # read the file content
     file = open(path, 'r')
     lines = file.readlines()
     for l in lines:
@@ -115,7 +120,21 @@ class Pointer(vtk.vtkObject):
       if l.startswith('YAW'):
         self.ptrYawAxis = q.tolist()
     self.checkPtrAxes()
-    self.id = os.path.basename(path).split('.txt')[0] # retrieve filename only
+    # calculate the model transformation necessary to align with yaw and roll axes
+    ptsFrom = vtk.vtkPoints()
+    ptsFrom.InsertNextPoint([0,0,0]) # model origin
+    ptsFrom.InsertNextPoint([0,1,0]) # yaw axis in original model
+    ptsFrom.InsertNextPoint([0,0,-1]) # roll axis in original model
+    ptsTo = vtk.vtkPoints()
+    ptsTo.InsertNextPoint([0,0,0])
+    ptsTo.InsertNextPoint(self.ptrYawAxis)
+    ptsTo.InsertNextPoint(self.ptrRollAxis)
+    ldmkTransfo = vtk.vtkLandmarkTransform()
+    ldmkTransfo.SetSourceLandmarks(ptsFrom)
+    ldmkTransfo.SetTargetLandmarks(ptsTo)
+    ldmkTransfo.SetModeToSimilarity()
+    ldmkTransfo.Update()
+    self.modelTransfoNode.SetMatrixTransformToParent(ldmkTransfo.GetMatrix())
     return True
 
   def checkPtrAxes(self):
@@ -166,7 +185,7 @@ class Pointer(vtk.vtkObject):
     elif self.ptrTransfoNode.GetAttribute("TransformStatus") == "OK":
       if not self.tracking:
         self.tracking = True
-        # logging.info(" :D Tracking started")
+        # logging.info(" => Tracking started")
         self.InvokeEvent(self.trackingStartedEvent)
       # update current matrices
       self.ptrMat = slicer.util.arrayFromTransformMatrix(self.ptrTransfoNode)

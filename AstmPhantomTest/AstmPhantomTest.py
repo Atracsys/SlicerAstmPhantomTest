@@ -701,7 +701,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     #   Distance accuracy test
     self.distMeasurement = DistMeasurement()
 
-    # Storing sounds
+    # Loading some sounds
     self.sounds = {}
     self.sounds["plop"] = qt.QSound(resourcePath + "sounds/plop.wav")
     self.sounds["done"] = qt.QSound(resourcePath + "sounds/done.wav")
