@@ -208,12 +208,12 @@
         <item row="6" column="1">
          <layout class="QHBoxLayout" name="locationsLayout">
           <item>
-           <widget class="QCheckBox" name="locCheckBoxPC">
+           <widget class="QCheckBox" name="locCheckBoxCL">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>PC</string>
+             <string>CL</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -221,12 +221,12 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="locCheckBoxPR">
+           <widget class="QCheckBox" name="locCheckBoxBL">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>PR</string>
+             <string>BL</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -234,12 +234,12 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="locCheckBoxPL">
+           <widget class="QCheckBox" name="locCheckBoxTL">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>PL</string>
+             <string>TL</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -247,12 +247,12 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="locCheckBoxPBK">
+           <widget class="QCheckBox" name="locCheckBoxLL">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>PBK</string>
+             <string>LL</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -260,12 +260,12 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="locCheckBoxPBT">
+           <widget class="QCheckBox" name="locCheckBoxRL">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>PBT</string>
+             <string>RL</string>
             </property>
             <property name="checked">
              <bool>true</bool>
@@ -413,7 +413,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="hackPCButton">
+          <widget class="QPushButton" name="hackCLButton">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -424,12 +424,12 @@
             </size>
            </property>
            <property name="text">
-            <string>PC</string>
+            <string>CL</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="hackPRButton">
+          <widget class="QPushButton" name="hackBLButton">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -440,12 +440,12 @@
             </size>
            </property>
            <property name="text">
-            <string>PR</string>
+            <string>BL</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="hackPLButton">
+          <widget class="QPushButton" name="hackTLButton">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -456,12 +456,12 @@
             </size>
            </property>
            <property name="text">
-            <string>PL</string>
+            <string>TL</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="hackPBKButton">
+          <widget class="QPushButton" name="hackLLButton">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -472,12 +472,12 @@
             </size>
            </property>
            <property name="text">
-            <string>PBK</string>
+            <string>LL</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="hackPBTButton">
+          <widget class="QPushButton" name="hackRLButton">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -488,7 +488,7 @@
             </size>
            </property>
            <property name="text">
-            <string>PBT</string>
+            <string>RL</string>
            </property>
           </widget>
          </item>

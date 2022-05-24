@@ -1,5 +1,5 @@
 # ASTM Phantom Test
-This software is a module for [3D Slicer](https://www.slicer.org) to perform the accuracy test of a tracking system as described in the [standard ASTM F2554](https://www.astm.org/f2554-18.html). (:warning: The procedures described hereafter slightly differ from those of the current version of the standard because they are based on a future revision).
+This software is a module for [3D Slicer](https://www.slicer.org) to perform the accuracy test of a tracking system as described in the [standard ASTM F2554](https://www.astm.org/f2554-18.html). (:warning: The procedures described hereafter slightly follow the guidelines outlined in a revised version of the standard to be adopted in late 2022).
 
 This test relies on a calibration object, hereafter referred to as the "phantom", of known dimensions. Performing measurements on such a phantom provides a reliable assessment of the tracking system accuracy and precision.
 
@@ -169,8 +169,7 @@ The parameter file also describes the pointer rotation axes (`ROLL`, `PITCH`, `Y
 
 ## Working volume file<a name="wvFile"></a>
 Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various information:
-- the coordinates of the locations that the phantom should be placed at in the working volume. Beside the center location (`PC`), all other locations lie at the edges of the working volume, as described in the ASTM standard.
-`PBT` is located at the very bottom from the center, `PL` the very left, `PR` the very right and `PBK` the very back. All these coordinates are expressed in the referential of the tracker.
+- the coordinates of the locations that the phantom should be placed at in the working volume. Beside the center location (`CL`), all other locations lie at the edges of the working volume, as described in the ASTM standard. The four other locations are placed on the outer boundaries of the back plane. `BL` is located at the bottom, `TL` at the top, `LL` at the left and `RL` at the right. All these coordinates are expressed in the referential of the tracker.
 
 ![Locations](/readme_img/wv_locations_light.svg#gh-light-mode-only)
 ![Locations](/readme_img/wv_locations_dark.svg#gh-dark-mode-only)

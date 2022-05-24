@@ -169,19 +169,19 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.testCheckBox3.connect('stateChanged(int)', self.onTestCheckBox3Changed)
       self.ui.testCheckBox4.connect('stateChanged(int)', self.onTestCheckBox4Changed)
       self.ui.testCheckBox5.connect('stateChanged(int)', self.onTestCheckBox5Changed)
-      self.ui.locCheckBoxPC.connect('stateChanged(int)', self.onLocCheckBoxPCChanged)
-      self.ui.locCheckBoxPR.connect('stateChanged(int)', self.onLocCheckBoxPRChanged)
-      self.ui.locCheckBoxPL.connect('stateChanged(int)', self.onLocCheckBoxPLChanged)
-      self.ui.locCheckBoxPBK.connect('stateChanged(int)', self.onLocCheckBoxPBKChanged)
-      self.ui.locCheckBoxPBT.connect('stateChanged(int)', self.onLocCheckBoxPBTChanged)
+      self.ui.locCheckBoxCL.connect('stateChanged(int)', self.onLocCheckBoxCLChanged)
+      self.ui.locCheckBoxBL.connect('stateChanged(int)', self.onLocCheckBoxBLChanged)
+      self.ui.locCheckBoxTL.connect('stateChanged(int)', self.onLocCheckBoxTLChanged)
+      self.ui.locCheckBoxLL.connect('stateChanged(int)', self.onLocCheckBoxLLChanged)
+      self.ui.locCheckBoxRL.connect('stateChanged(int)', self.onLocCheckBoxRLChanged)
       self.ui.resCamButton.connect('clicked()', self.logic.placeCamWrtPhantom)
 
       self.ui.hackCalibButton.connect('clicked()', self.hackCalib)
-      self.ui.hackPCButton.connect('clicked()', self.hackPC)
-      self.ui.hackPRButton.connect('clicked()', self.hackPR)
-      self.ui.hackPLButton.connect('clicked()', self.hackPL)
-      self.ui.hackPBKButton.connect('clicked()', self.hackPBK)
-      self.ui.hackPBTButton.connect('clicked()', self.hackPBT)
+      self.ui.hackCLButton.connect('clicked()', self.hackCL)
+      self.ui.hackBLButton.connect('clicked()', self.hackBL)
+      self.ui.hackTLButton.connect('clicked()', self.hackTL)
+      self.ui.hackLLButton.connect('clicked()', self.hackLL)
+      self.ui.hackRLButton.connect('clicked()', self.hackRL)
       # self.ui.hackXButton.connect('clicked()', some callable function)
 
       self.intval = qt.QIntValidator(1,999) # input validator for point acqui line edit
@@ -262,16 +262,11 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       logging.error(msg)
       slicer.util.errorDisplay(msg)
     else:
-      pc = "PC" in self.logic.workingVolume.locs
-      self.ui.locCheckBoxPC.checked = pc
-      pr = "PR" in self.logic.workingVolume.locs
-      self.ui.locCheckBoxPR.checked = pr
-      pl = "PL" in self.logic.workingVolume.locs
-      self.ui.locCheckBoxPL.checked = pl
-      pbk = "PBK" in self.logic.workingVolume.locs
-      self.ui.locCheckBoxPBK.checked = pbk
-      pbt = "PBT" in self.logic.workingVolume.locs
-      self.ui.locCheckBoxPBT.checked = pbt
+      self.ui.locCheckBoxCL.checked = "CL" in self.logic.workingVolume.locs
+      self.ui.locCheckBoxBL.checked = "BL" in self.logic.workingVolume.locs
+      self.ui.locCheckBoxTL.checked = "TL" in self.logic.workingVolume.locs
+      self.ui.locCheckBoxLL.checked = "LL" in self.logic.workingVolume.locs
+      self.ui.locCheckBoxRL.checked = "RL" in self.logic.workingVolume.locs
       # update moving tolerance slider
       self.onMovingTolSliderMoved()
       self.onMovingTolSliderReleased()
@@ -350,35 +345,35 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     cd = ast.literal_eval(calldata)
     loc = cd[0]
     if loc in self.logic.workingVolume.locs: # check but should always be true
-      if loc == "PC":
-        self.ui.locCheckBoxPC.enabled = False
-        self.ui.hackPCButton.enabled = False
-      if loc == "PR":
-        self.ui.locCheckBoxPR.enabled = False
-        self.ui.hackPRButton.enabled = False
-      if loc == "PL":
-        self.ui.locCheckBoxPL.enabled = False
-        self.ui.hackPLButton.enabled = False
-      if loc == "PBK":
-        self.ui.locCheckBoxPBK.enabled = False
-        self.ui.hackPBKButton.enabled = False
-      if loc == "PBT":
-        self.ui.locCheckBoxPBT.enabled = False
-        self.ui.hackPBTButton.enabled = False
+      if loc == "CL":
+        self.ui.locCheckBoxCL.enabled = False
+        self.ui.hackCLButton.enabled = False
+      if loc == "BL":
+        self.ui.locCheckBoxBL.enabled = False
+        self.ui.hackBLButton.enabled = False
+      if loc == "TL":
+        self.ui.locCheckBoxTL.enabled = False
+        self.ui.hackTLButton.enabled = False
+      if loc == "LL":
+        self.ui.locCheckBoxLL.enabled = False
+        self.ui.hackLLButton.enabled = False
+      if loc == "RL":
+        self.ui.locCheckBoxRL.enabled = False
+        self.ui.hackRLButton.enabled = False
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onSessionEnded(self, caller, event = None, calldata = None):
-    self.ui.locCheckBoxPC.enabled = False
-    self.ui.locCheckBoxPR.enabled = False
-    self.ui.locCheckBoxPL.enabled = False
-    self.ui.locCheckBoxPBK.enabled = False
-    self.ui.locCheckBoxPBT.enabled = False
+    self.ui.locCheckBoxCL.enabled = False
+    self.ui.locCheckBoxBL.enabled = False
+    self.ui.locCheckBoxTL.enabled = False
+    self.ui.locCheckBoxLL.enabled = False
+    self.ui.locCheckBoxRL.enabled = False
     self.ui.hackCalibButton.enabled = False
-    self.ui.hackPCButton.enabled = False
-    self.ui.hackPRButton.enabled = False
-    self.ui.hackPLButton.enabled = False
-    self.ui.hackPBKButton.enabled = False
-    self.ui.hackPBTButton.enabled = False
+    self.ui.hackCLButton.enabled = False
+    self.ui.hackBLButton.enabled = False
+    self.ui.hackTLButton.enabled = False
+    self.ui.hackLLButton.enabled = False
+    self.ui.hackRLButton.enabled = False
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onTestNamesUpdated(self, caller, event, calldata):
@@ -404,56 +399,56 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   def onTestCheckBox5Changed(self, val):
     self.logic.tests[4][1] = val
   
-  def onLocCheckBoxPCChanged(self, val):
+  def onLocCheckBoxCLChanged(self, val):
     if val:
-      self.logic.addWorkingVolumeTarget("PC")
-      self.ui.hackPCButton.enabled = True
+      self.logic.addWorkingVolumeTarget("CL")
+      self.ui.hackCLButton.enabled = True
     else:
-      self.logic.removeWorkingVolumeTarget("PC")
-      self.ui.hackPCButton.enabled = False
+      self.logic.removeWorkingVolumeTarget("CL")
+      self.ui.hackCLButton.enabled = False
   
-  def onLocCheckBoxPRChanged(self, val):
+  def onLocCheckBoxBLChanged(self, val):
     if val:
-      self.logic.addWorkingVolumeTarget("PR")
-      self.ui.hackPRButton.enabled = True
+      self.logic.addWorkingVolumeTarget("BL")
+      self.ui.hackBLButton.enabled = True
     else:
-      self.logic.removeWorkingVolumeTarget("PR")
-      self.ui.hackPRButton.enabled = False
+      self.logic.removeWorkingVolumeTarget("BL")
+      self.ui.hackBLButton.enabled = False
 
-  def onLocCheckBoxPLChanged(self, val):
+  def onLocCheckBoxTLChanged(self, val):
     if val:
-      self.logic.addWorkingVolumeTarget("PL")
-      self.ui.hackPLButton.enabled = True
+      self.logic.addWorkingVolumeTarget("TL")
+      self.ui.hackTLButton.enabled = True
     else:
-      self.logic.removeWorkingVolumeTarget("PL")
-      self.ui.hackPLButton.enabled = False
+      self.logic.removeWorkingVolumeTarget("TL")
+      self.ui.hackTLButton.enabled = False
 
-  def onLocCheckBoxPBKChanged(self, val):
+  def onLocCheckBoxLLChanged(self, val):
     if val:
-      self.logic.addWorkingVolumeTarget("PBK")
-      self.ui.hackPBKButton.enabled = True
+      self.logic.addWorkingVolumeTarget("LL")
+      self.ui.hackLLButton.enabled = True
     else:
-      self.logic.removeWorkingVolumeTarget("PBK")
-      self.ui.hackPBKButton.enabled = False
+      self.logic.removeWorkingVolumeTarget("LL")
+      self.ui.hackLLButton.enabled = False
 
-  def onLocCheckBoxPBTChanged(self, val):
+  def onLocCheckBoxRLChanged(self, val):
     if val:
-      self.logic.addWorkingVolumeTarget("PBT")
-      self.ui.hackPBTButton.enabled = True
+      self.logic.addWorkingVolumeTarget("RL")
+      self.ui.hackRLButton.enabled = True
     else:
-      self.logic.removeWorkingVolumeTarget("PBT")
-      self.ui.hackPBTButton.enabled = False
+      self.logic.removeWorkingVolumeTarget("RL")
+      self.ui.hackRLButton.enabled = False
   
   def onOperatorIdChanged(self):
     opId = self.ui.operatorLineEdit.text
     if opId != "" and opId != self.logic.operatorId: # not empty and not the same
       if not self.logic.operatorId: # if the first time
         # Enable locations checkboxes
-        self.ui.locCheckBoxPC.enabled = self.ui.locCheckBoxPC.checked
-        self.ui.locCheckBoxPR.enabled = self.ui.locCheckBoxPR.checked
-        self.ui.locCheckBoxPL.enabled = self.ui.locCheckBoxPL.checked
-        self.ui.locCheckBoxPBK.enabled = self.ui.locCheckBoxPBK.checked
-        self.ui.locCheckBoxPBT.enabled = self.ui.locCheckBoxPBT.checked
+        self.ui.locCheckBoxCL.enabled = self.ui.locCheckBoxCL.checked
+        self.ui.locCheckBoxBL.enabled = self.ui.locCheckBoxBL.checked
+        self.ui.locCheckBoxTL.enabled = self.ui.locCheckBoxTL.checked
+        self.ui.locCheckBoxLL.enabled = self.ui.locCheckBoxLL.checked
+        self.ui.locCheckBoxRL.enabled = self.ui.locCheckBoxRL.checked
 
       self.logic.operatorId = opId
       # Checking for dev
@@ -464,11 +459,11 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.hackCollapsibleButton.collapsed = False
         self.ui.hackCollapsibleButton.enabled = True
         self.ui.hackCalibButton.enabled = True
-        self.ui.hackPCButton.enabled = self.ui.locCheckBoxPC.checked
-        self.ui.hackPRButton.enabled = self.ui.locCheckBoxPR.checked
-        self.ui.hackPLButton.enabled = self.ui.locCheckBoxPL.checked
-        self.ui.hackPBKButton.enabled = self.ui.locCheckBoxPBK.checked
-        self.ui.hackPBTButton.enabled = self.ui.locCheckBoxPBT.checked
+        self.ui.hackCLButton.enabled = self.ui.locCheckBoxCL.checked
+        self.ui.hackBLButton.enabled = self.ui.locCheckBoxBL.checked
+        self.ui.hackTLButton.enabled = self.ui.locCheckBoxTL.checked
+        self.ui.hackLLButton.enabled = self.ui.locCheckBoxLL.checked
+        self.ui.hackRLButton.enabled = self.ui.locCheckBoxRL.checked
         self.ui.hackXButton.enabled = True
       else: # normal user
         logging.info(f"----- Welcome {opId} :) -----")
@@ -605,28 +600,28 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
                   logging.info(cd)
                   self.logic.onCalibrationPointDoneOut(self.logic, 0, cd)
 
-  def hackPX(self, PX):
-    if PX in self.logic.workingVolume.locs:
-      logging.info(f"~~~~~~~~~~~~ Hack working volume {PX} ! ~~~~~~~~~~~~")
-      cd = str([PX] + self.logic.workingVolume.simpPhantPosWithOffset())
+  def hackLoc(self, loc):
+    if loc in self.logic.workingVolume.locs:
+      logging.info(f"~~~~~~~~~~~~ Hack working volume {loc} ! ~~~~~~~~~~~~")
+      cd = str([loc] + self.logic.workingVolume.simpPhantPosWithOffset())
       self.logic.wvTargetsTop.InvokeEvent(self.logic.wvTargetsTop.targetHitEvent, cd)
     else:
-      logging.info(f"Cannot hack {PX}: not defined in working volume file")
+      logging.info(f"Cannot hack {loc}: not defined in working volume file")
 
-  def hackPC(self):
-    self.hackPX('PC')
+  def hackCL(self):
+    self.hackLoc('CL')
   
-  def hackPR(self):
-    self.hackPX('PR')
+  def hackBL(self):
+    self.hackLoc('BL')
 
-  def hackPL(self):
-    self.hackPX('PL')
+  def hackTL(self):
+    self.hackLoc('TL')
   
-  def hackPBK(self):
-    self.hackPX('PBK')
+  def hackLL(self):
+    self.hackLoc('LL')
 
-  def hackPBT(self):
-    self.hackPX('PBT')
+  def hackRL(self):
+    self.hackLoc('RL')
 
 #
 # AstmPhantomTestLogic
@@ -812,9 +807,9 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       # check that target does not already exist, this may be possible as both locCheckBoxes
       # and readWorkingVolumeFile call addWorkingVolumeTarget
       if not targetId in self.wvTargetsTop.targets:
-        self.wvTargetsTop.addTarget(targetId, self.workingVolume.locs[targetId], True, True, 50)
+        self.wvTargetsTop.addTarget(targetId, self.workingVolume.locs[targetId], True, False, 50)
       if not targetId in self.wvTargetsFront.targets:
-        self.wvTargetsFront.addTarget(targetId, self.workingVolume.locs[targetId], True, True, 50)
+        self.wvTargetsFront.addTarget(targetId, self.workingVolume.locs[targetId], True, False, 50)
   
   def removeWorkingVolumeTarget(self, targetId):
     self.wvTargetsTop.removeTarget(targetId)
@@ -1317,7 +1312,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
     # Generating report in HTML
     # Stack all values
-    locations = ["ALL", "PC", "PR", "PL", "PBK", "PBT"] # match html order
+    locations = ["ALL", "CL", "BL", "TL", "LL", "RL"] # match html order
     def lookup(d, k, locs): # look up key k in dict d at locations locs
       lst = []
       for l in locs:
@@ -1415,7 +1410,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'For precision, the maximum distance of between two measurements (span) is reported. Also, the deviations are calculated as the distances of all the measurements from their average. Calculated as such, the Root Mean Square (RMS) of the deviations equates their standard deviation and is reported.\n'
       f'<p>\n'
       f'<table style="max-width: 700px;" class="hide">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>PC</td><td>PR</td><td>PL</td><td>PBK</td><td>PBT</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
       f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{sv[0][0]}</td><td>{sv[0][1]}</td><td>{sv[0][2]}</td><td>{sv[0][3]}</td><td>{sv[0][4]}</td><td>{sv[0][5]}</td></tr>\n'
       f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
       f'      <td>Mean</td><td><b>{sv[1][0]}</td><td>{sv[1][1]}</td><td>{sv[1][2]}</td><td>{sv[1][3]}</td><td>{sv[1][4]}</td><td>{sv[1][5]}</td></tr>\n'
@@ -1435,7 +1430,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'<h4>{self.rotMeasurements[0].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
       f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>PC</td><td>PR</td><td>PL</td><td>PBK</td><td>PBT</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
       f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r0v[0][0]}</td><td>{r0v[0][1]}</td><td>{r0v[0][2]}</td><td>{r0v[0][3]}</td><td>{r0v[0][4]}</td><td>{r0v[0][5]}</td></tr>\n'
       f'  <tr><td rowspan="2">Angle (°)</td>\n'
       f'      <td>Min</td><td><b>{r0v[1][0]}</td><td>{r0v[1][1]}</td><td>{r0v[1][2]}</td><td>{r0v[1][3]}</td><td>{r0v[1][4]}</td><td>{r0v[1][5]}</td></tr>\n'
@@ -1449,7 +1444,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'<h4>{self.rotMeasurements[1].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
       f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>PC</td><td>PR</td><td>PL</td><td>PBK</td><td>PBT</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
       f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r1v[0][0]}</td><td>{r1v[0][1]}</td><td>{r1v[0][2]}</td><td>{r1v[0][3]}</td><td>{r1v[0][4]}</td><td>{r1v[0][5]}</td></tr>\n'
       f'  <tr><td rowspan="2">Angle (°)</td>\n'
       f'      <td>Min</td><td><b>{r1v[1][0]}</td><td>{r1v[1][1]}</td><td>{r1v[1][2]}</td><td>{r1v[1][3]}</td><td>{r1v[1][4]}</td><td>{r1v[1][5]}</td></tr>\n'
@@ -1463,7 +1458,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'<h4>{self.rotMeasurements[2].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
       f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>PC</td><td>PR</td><td>PL</td><td>PBK</td><td>PBT</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
       f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r2v[0][0]}</td><td>{r2v[0][1]}</td><td>{r2v[0][2]}</td><td>{r2v[0][3]}</td><td>{r2v[0][4]}</td><td>{r2v[0][5]}</td></tr>\n'
       f'  <tr><td rowspan="2">Angle (°)</td>\n'
       f'      <td>Min</td><td><b>{r2v[1][0]}</td><td>{r2v[1][1]}</td><td>{r2v[1][2]}</td><td>{r2v[1][3]}</td><td>{r2v[1][4]}</td><td>{r2v[1][5]}</td></tr>\n'
@@ -1480,7 +1475,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'The registration is performed between the point clouds from the measurements and from the reference. The mean, minimum, maximum, RMS of the registration residuals are reported below.\n'
       f'<p>\n'
       f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>PC</td><td>PR</td><td>PL</td><td>PBK</td><td>PBT</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
       f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{mv[0][0]}</td><td>{mv[0][1]}</td><td>{mv[0][2]}</td><td>{mv[0][3]}</td><td>{mv[0][4]}</td><td>{mv[0][5]}</td></tr>\n'
       f'  <tr><td rowspan="5">Distances (mm)</td>\n'
       f'      <td>Num.</td><td><b>{mv[1][0]}</td><td>{mv[1][1]}</td><td>{mv[1][2]}</td><td>{mv[1][3]}</td><td>{mv[1][4]}</td><td>{mv[1][5]}</td></tr>\n'

@@ -155,18 +155,18 @@ class WorkingVolume(vtk.vtkObject):
           self.movingTolMax['tol'] = p[0]
           self.movingTolMax['depth'] = p[1]
         else:
-          if l.startswith('PC'):
-            self.locs['PC'] = p
+          if l.startswith('CL'):
+            self.locs['CL'] = p
             self.renTop.GetActiveCamera().SetFocalPoint(p.tolist())
             self.renFront.GetActiveCamera().SetFocalPoint(p.tolist())
-          if l.startswith('PR'):
-            self.locs['PR'] = p
-          if l.startswith('PL'):
-            self.locs['PL'] = p
-          if l.startswith('PBK'):
-            self.locs['PBK'] = p
-          if l.startswith('PBT'):
-            self.locs['PBT'] = p
+          if l.startswith('BL'):
+            self.locs['BL'] = p
+          if l.startswith('TL'):
+            self.locs['TL'] = p
+          if l.startswith('LL'):
+            self.locs['LL'] = p
+          if l.startswith('RL'):
+            self.locs['RL'] = p
           if l.startswith('ROLL'):
             self.rollAxis = p
           if l.startswith('PITCH'):
@@ -175,13 +175,13 @@ class WorkingVolume(vtk.vtkObject):
             self.yawAxis = p
 
     # Setup cameras for working volume guidance
-    mag = abs(self.locs['PBK'][2]) # magnitude of the depth of the working volume
+    mag = abs(self.locs['TL'][2]) # magnitude of the depth of the working volume
     # Top view of the working volume
-    self.renTop.GetActiveCamera().SetPosition((self.locs['PC'] + 2*mag*self.yawAxis).tolist())
+    self.renTop.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.yawAxis).tolist())
     # initialize the cam far enough
     self.renTop.GetActiveCamera().SetViewUp((-self.rollAxis).tolist())
     # Front view of the working volume
-    self.renFront.GetActiveCamera().SetPosition((self.locs['PC'] + 2*mag*self.rollAxis).tolist())
+    self.renFront.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.rollAxis).tolist())
     self.renFront.GetActiveCamera().SetViewUp(self.yawAxis.tolist())
 
     if nodes:
