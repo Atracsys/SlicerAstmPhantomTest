@@ -1090,6 +1090,9 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.RemoveObserver(self.test1Obs1)
     self.targets.RemoveObserver(self.test1Obs2)
     self.targets.RemoveObserver(self.test1Obs3)
+    # Forward measured average position to rotation tests
+    for m in self.rotMeasurements:
+      m.basePos = self.singlePointMeasurement.avgPos
     # Reset
     self.singlePointMeasurement.reset()
     self.testsToDo.pop(0) # remove the test
@@ -1466,7 +1469,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'The rotation tests measure the precision of single point acquisition under various orientations of the pointer. These orientations consists of <b>successive</b> rotations around the roll, pitch and yaw axes of the pointer.<br>\n'
       f'The measurements consist in sampling the position of the pointer every 1° during a rotation. The number of measurements is reported in the table below.<br>\n'
       f'For each rotation axis (roll, pitch, yaw), the minimum and maximum angles for which tracking is possible are reported.<br>\n'
-      f'For precision, the maximum distance of between two measurements (span) is reported. Also, the deviations are calculated as the distances of all the measurements from their average. Calculated as such, the Root Mean Square (RMS) of the deviations equates their standard deviation and is reported.\n'
+      f'For precision, the maximum distance of between two measurements (span) and the RMS of the deviations are reported. The deviations are calculated as the distances of each measurement from the average position previously determined in the Single Point Test. If the Single Point Test is not performed, then the ground truth position of the measured divot is used instead of the average position.\n'
       f'\n'
       f'<h4>{self.rotMeasurements[0].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
