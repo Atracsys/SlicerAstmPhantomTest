@@ -56,6 +56,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     ScriptedLoadableModuleWidget.__init__(self, parent)
     VTKObservationMixin.__init__(self)  # needed for parameter node observation
     self.logic = None
+    self.waitingForAllNodes = True
     self.ptrNode = None
     self.refNode = None
     self.ptrRefNode = None
@@ -135,20 +136,31 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.resourcePath('pointerRAS.stl'), self.resourcePath('simpPhantomRAS.stl'),
         self.resourcePath(''), savePath)
 
-      # Restrict display of the phantom and pointer to the main scene
+      # Forward some rendering handles to the logic class
+      self.logic.mainWidget = slicer.app.layoutManager().threeDWidget('ViewMain')
+      self.logic.mainWidget.show()
+      self.logic.mainRenderer = self.logic.mainWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
+      self.logic.mainRenderer.ResetCamera()
+
+      self.logic.topWVWidget = slicer.app.layoutManager().threeDWidget('ViewTopWV')
+      self.logic.topWVWidget.hide()
+      self.logic.topWVRenderer = self.logic.topWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
+
+      self.logic.frontWVWidget = slicer.app.layoutManager().threeDWidget('ViewFrontWV')
+      self.logic.frontWVWidget.hide()
+      self.logic.frontWVRenderer = self.logic.frontWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
+
+      self.logic.initialize()
+
+      # Adding models to the various displays
+      # Display of the full phantom and pointer to the main scene
       self.logic.phantom.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
       self.logic.pointer.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
+      # Display of the simplified phantom to the working volume guidance scenes
       self.logic.workingVolume.simpPhantomModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeTopWV')
       self.logic.workingVolume.simpPhantomModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeFrontWV')
 
-      self.topWVWidget = slicer.app.layoutManager().threeDWidget('ViewTopWV')
-      self.topWVRenderer = self.topWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-      self.topWVCam = self.topWVRenderer.GetActiveCamera()
-      self.frontWVWidget = slicer.app.layoutManager().threeDWidget('ViewFrontWV')
-      self.frontWVRenderer = self.frontWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-      self.frontWVCam = self.frontWVRenderer.GetActiveCamera()
-
-      # Connections
+      ## Connections
 
       # These connections ensure that we update parameter node when scene is closed
       self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
@@ -450,6 +462,13 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.locCheckBoxLL.enabled = self.ui.locCheckBoxLL.checked
         self.ui.locCheckBoxRL.enabled = self.ui.locCheckBoxRL.checked
 
+        # Enable test checkboxes
+        self.ui.testCheckBox1.enabled = True
+        self.ui.testCheckBox2.enabled = True
+        self.ui.testCheckBox3.enabled = True
+        self.ui.testCheckBox4.enabled = True
+        self.ui.testCheckBox5.enabled = True
+
       self.logic.operatorId = opId
       # Checking for dev
       pw = '8ee930e3474f1b9a4a0d7524f3527b93f1ff2e4fa89a385f1ede01a15d7cc9e4'
@@ -514,6 +533,14 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.logic.pointer.numFrames = val
       logging.info(f"Number of frames for point acquisition set to {self.logic.pointer.numFrames}")
 
+  @vtk.calldata_type(vtk.VTK_STRING)
+  def onTransfoNodeChanged(self, caller, event=None, calldata=None):
+    status = caller.GetAttribute("TransformStatus")
+    if status:
+      self.ui.refStatusValue.text = status
+    else:
+      self.ui.refStatusValue.text = "--"
+
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeAdded(self, caller, event, calldata):
     """
@@ -523,30 +550,39 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     logging.info('onNodeAdded: Called for ' + calledNode.GetName())
     if calledNode.GetName() == 'PointerToPhantom':
       self.ptrRefNode = calledNode
-      self.ncPtrRefObs = self.ptrRefNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
-          self.onNodeChanged)
+      self.ptrRefNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
+        self.onNodeChanged)
     if calledNode.GetName() == 'PhantomToTracker':
-        self.refNode = calledNode
-        self.ncRefObs = self.refNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
-          self.onNodeChanged)
+      self.refNode = calledNode
+      self.refNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
+        self.onNodeChanged)
     if calledNode.GetName() == 'PointerToTracker':
-        self.ptrNode = calledNode
-        self.ncPtrObs = self.ptrNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
-          self.onNodeChanged)
+      self.ptrNode = calledNode
+      self.ptrNode.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
+        self.onNodeChanged)
 
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeChanged(self, caller, event=None, calldata=None):
     """
     Called when a node has changed
     """
-    if self.ptrNode and self.refNode and self.ptrRefNode:
+    if caller.GetName() == 'PointerToTracker':
+      self.ui.ptrStatusValue.text = caller.GetAttribute("TransformStatus")
+    if caller.GetName() == 'PhantomToTracker':
+      self.ui.refStatusValue.text = caller.GetAttribute("TransformStatus")
+    if caller.GetName() == 'PointerToPhantom':
+      self.ui.ptrRefStatusValue.text = caller.GetAttribute("TransformStatus")
+    
+    # Checking that all transfo nodes are assigned and
+    # in tracker's field of view (transform status "OK")
+    if self.waitingForAllNodes and self.ptrNode and self.refNode and self.ptrRefNode:
       if self.ptrNode.GetAttribute("TransformStatus") == "OK"  and \
       self.refNode.GetAttribute("TransformStatus") == "OK" and \
       self.ptrRefNode.GetAttribute("TransformStatus") == "OK":
-        self.ptrNode.RemoveObserver(self.ncPtrObs)
-        self.refNode.RemoveObserver(self.ncRefObs)
-        self.ptrRefNode.RemoveObserver(self.ncPtrRefObs)
+        self.waitingForAllNodes = False
         logging.info('onNodeChanged: all required transform nodes are valid, let\'s process!')
+        self.ui.trackerLineEdit.enabled = True
+        self.ui.trackerLineEdit.setFocus()
         self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
         # Selectors call since combobox already selected first item in each
         self.onPointerFileChanged()
@@ -643,28 +679,19 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     Called when the logic class is instantiated. Can be used for initializing member variables.
     """    
     ScriptedLoadableModuleLogic.__init__(self)
+    self.simpPhantomPath = simpPhantomPath
+    self.resourcePath = resourcePath
     self.savePath = savePath
     self.testNamesUpdated = vtk.vtkCommand.UserEvent + 1
     self.sessionEndedEvent = vtk.vtkCommand.UserEvent + 2
 
-    # Accessing the various 3D views
-    self.mainWidget = slicer.app.layoutManager().threeDWidget('ViewMain')
-    self.mainWidget.show()
-    self.topWVWidget = slicer.app.layoutManager().threeDWidget('ViewTopWV')
-    self.topWVWidget.hide()
-    self.frontWVWidget = slicer.app.layoutManager().threeDWidget('ViewFrontWV')
-    self.frontWVWidget.hide()
-
-    # Storing access to important vtk items
-    self.mainRenderer = self.mainWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-    self.mainCam = self.mainRenderer.GetActiveCamera()
-    self.mainRenderer.ResetCamera()
-
-    self.topWVRenderer = self.topWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-    self.topWVCam = self.topWVRenderer.GetActiveCamera()
-
-    self.frontWVRenderer = self.frontWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-    self.frontWVCam = self.frontWVRenderer.GetActiveCamera()
+    # If rendering is used, 3D views and renderers are made available by the widget class
+    self.mainWidget = None
+    self.mainRenderer = None
+    self.topWVWidget = None
+    self.topWVRenderer = None
+    self.frontWVWidget = None
+    self.frontWVRenderer = None
 
     # Creating core objects
     self.operatorId = None
@@ -676,13 +703,23 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.pointer.maxTilt = 50
     self.pointer.readModel(pointerModelPath)
 
+    # Loading some sounds
+    self.sounds = {}
+    self.sounds["plop"] = qt.QSound(self.resourcePath + "sounds/plop.wav")
+    self.sounds["done"] = qt.QSound(self.resourcePath + "sounds/done.wav")
+    self.sounds["danger"] = qt.QSound(self.resourcePath + "sounds/danger.wav")
+    self.sounds["error"] = qt.QSound(self.resourcePath + "sounds/error.wav")
+    self.sounds["touchdown"] = qt.QSound(self.resourcePath + "sounds/touchdown.wav")
+
+  def initialize(self):
+    # Creating the targets and the working volume
     self.targets = Targets(self.mainRenderer)
     self.targetsDone = Targets(self.mainRenderer)
-    self.workingVolume = WorkingVolume(self.topWVWidget, self.frontWVWidget)
-    self.workingVolume.readSimpPhantomModel(simpPhantomPath)
+    self.workingVolume = WorkingVolume(self.topWVRenderer, self.frontWVRenderer)
+    self.workingVolume.readSimpPhantomModel(self.simpPhantomPath)
     self.wvTargetsTop = Targets(self.workingVolume.renTop)
     self.wvTargetsFront = Targets(self.workingVolume.renFront)
-    self.curLoc = "X" # current location in the working volume
+    self.curLoc = "X" # null location in the working volume
 
     self.tests = [[]] # initialization
     self.testsToDo = []
@@ -695,14 +732,6 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.angleAnn = None # annotation actor for angle values
     #   Distance accuracy test
     self.distMeasurement = DistMeasurement()
-
-    # Loading some sounds
-    self.sounds = {}
-    self.sounds["plop"] = qt.QSound(resourcePath + "sounds/plop.wav")
-    self.sounds["done"] = qt.QSound(resourcePath + "sounds/done.wav")
-    self.sounds["danger"] = qt.QSound(resourcePath + "sounds/danger.wav")
-    self.sounds["error"] = qt.QSound(resourcePath + "sounds/error.wav")
-    self.sounds["touchdown"] = qt.QSound(resourcePath + "sounds/touchdown.wav")
 
   def process(self, ptrRefTransfoNode, refTransfoNode, ptrTransfoNode):
     """
@@ -763,21 +792,23 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         rfpt = rpos + rcamDir*Dist(O, rpos) # set focal point at reasonable distance
       else:
         rfpt = rpos + rcamDir*np.dot(O-rpos, vz)/np.dot(rcamDir, vz)
-      self.mainCam.SetPosition(rpos)
-      self.mainCam.SetFocalPoint(rfpt)
-      self.mainCam.SetViewUp(vz)
+      cam = self.mainRenderer.GetActiveCamera()
+      cam.SetPosition(rpos)
+      cam.SetFocalPoint(rfpt)
+      cam.SetViewUp(vz)
       self.mainRenderer.ResetCameraClippingRange()
 
-    if not pointer:
-      # empirical good camera placement without the pointer
-      camPos = np.array([65.101, -191.804, 204.762])
-      camDir = np.array([0.006, 0.795, -0.606])
-      placeCam(self, camPos, camDir)
-    else:
-      # empirical good camera placement with the pointer
-      camPos = np.array([63.977, -242.82, 272.015])
-      camDir = np.array([0.006, 0.795, -0.606])
-      placeCam(self, camPos, camDir)
+    if self.mainRenderer:
+      if not pointer:
+        # empirical good camera placement without the pointer
+        camPos = np.array([65.101, -191.804, 204.762])
+        camDir = np.array([0.006, 0.795, -0.606])
+        placeCam(self, camPos, camDir)
+      else:
+        # empirical good camera placement with the pointer
+        camPos = np.array([63.977, -242.82, 272.015])
+        camDir = np.array([0.006, 0.795, -0.606])
+        placeCam(self, camPos, camDir)
 
   def readPointerFile(self, path):
     if self.pointer.readPointerFile(path):
@@ -932,12 +963,16 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # --------------------- Working volume guidance ---------------------
   def startWorkingVolumeGuidance(self):
     logging.info('Starting working volume guidance')
-    self.mainWidget.hide()
-    self.topWVWidget.show()
-    self.frontWVWidget.show()
+    if self.mainWidget and self.topWVWidget and self.frontWVWidget:
+      self.mainWidget.hide()
+      self.topWVWidget.show()
+      self.frontWVWidget.show()
+
     slicer.app.processEvents() # makes sure the rendering/display is done before continuing
-    ResetCameraScreenSpace(self.topWVRenderer)
-    ResetCameraScreenSpace(self.frontWVRenderer)
+    if self.topWVRenderer:
+      ResetCameraScreenSpace(self.topWVRenderer)
+    if self.frontWVRenderer:
+      ResetCameraScreenSpace(self.frontWVRenderer)
     if len(self.wvTargetsTop.targets) > 0:
       self.workingVolume.watchTransfoNode() # monitor phantom model placement
       self.wvTargetsTop.proxiDetect = True
@@ -957,9 +992,11 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.curLoc = cd[0]
     logging.info(f'   Phantom placed for location {self.curLoc} at {np.around(cd[1:4],2).tolist()}')
     self.sounds["touchdown"].play()
-    self.mainWidget.show()
-    self.topWVWidget.hide()
-    self.frontWVWidget.hide()
+    if self.mainWidget and self.topWVWidget and self.frontWVWidget:
+      self.mainWidget.show()
+      self.topWVWidget.hide()
+      self.frontWVWidget.hide()
+
     self.workingVolume.watchTransfoNode(False) # stop phantom model placement monitoring
     self.workingVolume.RemoveObserver(self.wvgObs1)
     self.wvTargetsTop.proxiDetect = False
@@ -996,15 +1033,16 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.singlePointMeasurement.acquiNumMax = 20
     self.singlePointMeasurement.curLoc = self.curLoc
     self.singlePointMeasurement.measurements[self.curLoc] = np.empty((0,3), float)
-    if not self.singleAnn:
-      self.singleAnn = vtk.vtkCornerAnnotation()
-      self.singleAnn.GetTextProperty().SetFontSize(180)
-      self.singleAnn.SetLinearFontScaleFactor(20)
-      self.singleAnn.GetTextProperty().SetColor(1,0,0)
-      self.singleAnn.GetTextProperty().BoldOn()
-      self.singleAnn.GetTextProperty().ShadowOn()
-    self.mainRenderer.AddActor(self.singleAnn)
-    self.placeCamWrtPhantom() # place camera wrt phantom only
+    if self.mainRenderer:
+      if not self.singleAnn:
+        self.singleAnn = vtk.vtkCornerAnnotation()
+        self.singleAnn.GetTextProperty().SetFontSize(180)
+        self.singleAnn.SetLinearFontScaleFactor(20)
+        self.singleAnn.GetTextProperty().SetColor(1,0,0)
+        self.singleAnn.GetTextProperty().BoldOn()
+        self.singleAnn.GetTextProperty().ShadowOn()
+      self.mainRenderer.AddActor(self.singleAnn)
+      self.placeCamWrtPhantom() # place camera wrt phantom only
 
     self.targets.proxiDetect = True
     self.pointer.timerDuration = 500 # ms
@@ -1045,7 +1083,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
   def stopSinglePtTest(self):
     logging.info(f'----- [{self.curLoc}] Single Point Test Stop -----')
-    self.mainRenderer.RemoveActor(self.singleAnn)
+    if self.mainRenderer:
+      self.mainRenderer.RemoveActor(self.singleAnn)
     self.targets.proxiDetect = False
     self.targets.removeAllTargets()
     self.targets.RemoveObserver(self.test1Obs1)
@@ -1094,7 +1133,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.onPointerTrackingStarted)
     self.rotTestObs5 = self.pointer.AddObserver(self.pointer.trackingStoppedEvent,
       self.onPointerTrackingStopped)
-    self.mainRenderer.AddActor(self.angleAnn)
+    if self.mainRenderer:
+      self.mainRenderer.AddActor(self.angleAnn)
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onRotMeasTargetOut(self, caller, event = None, calldata = None):
@@ -1103,7 +1143,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.pointer.RemoveObserver(self.rotTestObs3)
     self.pointer.RemoveObserver(self.rotTestObs4)
     self.pointer.RemoveObserver(self.rotTestObs5)
-    self.mainRenderer.RemoveActor(self.angleAnn)
+    if self.mainRenderer:
+      self.mainRenderer.RemoveActor(self.angleAnn)
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onPointerAnglesChanged(self, caller, event=None, calldata=None):

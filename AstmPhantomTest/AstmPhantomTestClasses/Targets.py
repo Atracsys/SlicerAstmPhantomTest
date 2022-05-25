@@ -14,6 +14,7 @@ class Targets(vtk.vtkObject):
   def __init__(self, renderer):
     super().__init__()
     self.renderer = renderer
+    self.rendering = self.renderer is not None
     self.targets = {}
     self.firstLbl = None
     # used to automatically detect target from pointer position
@@ -31,9 +32,10 @@ class Targets(vtk.vtkObject):
     self.targets[lbl] = Target(radius, colorIni, colorFin)
     self.targets[lbl].setPos(pos, lbl)
     self.targets[lbl].visible(vis)
-    self.renderer.AddActor(self.targets[lbl].actor)
-    if not hidelbl:
-      self.renderer.AddActor(self.targets[lbl].lblActor)
+    if self.rendering:
+      self.renderer.AddActor(self.targets[lbl].actor)
+      if not hidelbl:
+        self.renderer.AddActor(self.targets[lbl].lblActor)
     if not self.firstLbl:
       # storing label of first target
       self.firstLbl = next(iter(self.targets))
@@ -43,8 +45,9 @@ class Targets(vtk.vtkObject):
 
   def removeTarget(self, lbl):
     if lbl in self.targets:
-      self.renderer.RemoveActor(self.targets[lbl].actor)
-      self.renderer.RemoveActor(self.targets[lbl].lblActor)
+      if self.rendering:
+        self.renderer.RemoveActor(self.targets[lbl].actor)
+        self.renderer.RemoveActor(self.targets[lbl].lblActor)
       self.targets.pop(lbl)
       # updating label of first target, None if empty
       self.firstLbl = next(iter(self.targets), None)
@@ -52,9 +55,10 @@ class Targets(vtk.vtkObject):
         self.targets[self.firstLbl].visible(True)
   
   def removeAllTargets(self):
-    for t in self.targets.values():
-      self.renderer.RemoveActor(t.actor)
-      self.renderer.RemoveActor(t.lblActor)
+    if self.rendering:
+      for t in self.targets.values():
+        self.renderer.RemoveActor(t.actor)
+        self.renderer.RemoveActor(t.lblActor)
     self.targets = {}
     self.firstLbl = None
     self.lblHit = None

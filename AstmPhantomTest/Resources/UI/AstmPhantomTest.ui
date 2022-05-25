@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>368</width>
-    <height>387</height>
+    <height>434</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="vLayoutMain">
@@ -29,6 +29,132 @@
       <set>Qt::AlignCenter</set>
      </property>
      <layout class="QVBoxLayout" name="vLayoutSubMain">
+      <item>
+       <layout class="QHBoxLayout" name="arraysStatusLayout">
+        <item>
+         <spacer name="hSpacerStatus1">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="refStatusTitle">
+          <property name="text">
+           <string>Reference:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="refStatusValue">
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="hSpacerStatus2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="ptrStatusTitle">
+          <property name="text">
+           <string>Pointer:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="ptrStatusValue">
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="hSpacerStatus3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="ptrRefStatusTitle">
+          <property name="text">
+           <string>Ptr/Ref:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="ptrRefStatusValue">
+          <property name="font">
+           <font>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="hSpacerStatus4">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="Line" name="sepLine1">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
       <item>
        <layout class="QFormLayout" name="fLayoutTop">
         <property name="labelAlignment">
@@ -155,6 +281,9 @@
          <layout class="QHBoxLayout" name="testsLayout">
           <item>
            <widget class="QCheckBox" name="testCheckBox1">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>1</string>
             </property>
@@ -165,6 +294,9 @@
           </item>
           <item>
            <widget class="QCheckBox" name="testCheckBox2">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>2</string>
             </property>
@@ -175,6 +307,9 @@
           </item>
           <item>
            <widget class="QCheckBox" name="testCheckBox3">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>3</string>
             </property>
@@ -185,6 +320,9 @@
           </item>
           <item>
            <widget class="QCheckBox" name="testCheckBox4">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>4</string>
             </property>
@@ -195,6 +333,9 @@
           </item>
           <item>
            <widget class="QCheckBox" name="testCheckBox5">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>5</string>
             </property>
@@ -282,7 +423,11 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="trackerLineEdit"/>
+         <widget class="QLineEdit" name="trackerLineEdit">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+         </widget>
         </item>
         <item row="4" column="0">
          <widget class="QLabel" name="pointAcquiLabel">
@@ -382,18 +527,15 @@
        </layout>
       </item>
       <item>
-       <widget class="ctkCollapsibleButton" name="hackCollapsibleButton">
+       <widget class="ctkCollapsibleButton" name="hackCollapsibleButton" native="true">
         <property name="enabled">
          <bool>false</bool>
         </property>
-        <property name="text">
+        <property name="text" stdset="0">
          <string>dev shortcuts</string>
         </property>
-        <property name="collapsed">
+        <property name="collapsed" stdset="0">
          <bool>true</bool>
-        </property>
-        <property name="buttonTextAlignment">
-         <set>Qt::AlignCenter|Qt::AlignHCenter|Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
         </property>
         <layout class="QHBoxLayout" name="hackLayout">
          <item>

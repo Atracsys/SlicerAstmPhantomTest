@@ -70,27 +70,30 @@ class WorkingVolumeActor(vtk.vtkActor):
 
 class WorkingVolume(vtk.vtkObject):
 
-  def __init__(self, topWVWidget, frontWVWidget):
+  def __init__(self, renTop, renFront):
     super().__init__()
     self.id = "XXXXX" # working volume id, typically the tracker model (XXXXX)
 
-    self.actorTop = WorkingVolumeActor()
-    self.actorTop.GetProperty().SetColor(1,1,1)
-    self.actorTop.GetProperty().SetOpacity(0.2)
-    self.actorTop.edges.GetProperty().SetColor(0.2,1,0)
-    self.renTop = topWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-    self.renTop.GetActiveCamera().ParallelProjectionOn()
-    self.renTop.AddActor(self.actorTop)
-    self.renTop.AddActor(self.actorTop.edges)
+    self.renTop = renTop
+    self.renFront = renFront
+    self.rendering = self.renTop is not None and self.renFront is not None
 
-    self.actorFront = WorkingVolumeActor()
-    self.actorFront.GetProperty().SetColor(1,1,1)
-    self.actorFront.GetProperty().SetOpacity(0.2)
-    self.actorFront.edges.GetProperty().SetColor(1,0,0.8)
-    self.renFront = frontWVWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-    self.renFront.GetActiveCamera().ParallelProjectionOn()
-    self.renFront.AddActor(self.actorFront)
-    self.renFront.AddActor(self.actorFront.edges)
+    if self.rendering:
+      self.actorTop = WorkingVolumeActor()
+      self.actorTop.GetProperty().SetColor(1,1,1)
+      self.actorTop.GetProperty().SetOpacity(0.2)
+      self.actorTop.edges.GetProperty().SetColor(0.2,1,0)  
+      self.renTop.GetActiveCamera().ParallelProjectionOn()
+      self.renTop.AddActor(self.actorTop)
+      self.renTop.AddActor(self.actorTop.edges)
+
+      self.actorFront = WorkingVolumeActor()
+      self.actorFront.GetProperty().SetColor(1,1,1)
+      self.actorFront.GetProperty().SetOpacity(0.2)
+      self.actorFront.edges.GetProperty().SetColor(1,0,0.8)
+      self.renFront.GetActiveCamera().ParallelProjectionOn()
+      self.renFront.AddActor(self.actorFront)
+      self.renFront.AddActor(self.actorFront.edges)
 
     self.__mat = vtk.vtkMatrix4x4()
     self.pq = PosQueue(20)  # queue to continuously store the last 20 pointer positions
@@ -110,24 +113,27 @@ class WorkingVolume(vtk.vtkObject):
 
   # Simplified model of the phantom indicating its position in working volume    
   def readSimpPhantomModel(self, path):
-    prevModelNode = slicer.mrmlScene.GetFirstNodeByName('SimpPhantomModel')
-    if prevModelNode:
-      slicer.mrmlScene.RemoveNode(prevModelNode)
-    logging.info("Read simplified phantom model")
-    self.simpPhantomModel = slicer.util.loadModel(path)
-    self.simpPhantomModel.SetName('SimpPhantomModel')
-    self.simpPhantomModel.GetDisplayNode().SetColor(0,0.8,1.0)
+    if self.rendering:
+      prevModelNode = slicer.mrmlScene.GetFirstNodeByName('SimpPhantomModel')
+      if prevModelNode:
+        slicer.mrmlScene.RemoveNode(prevModelNode)
+      logging.info("Read simplified phantom model")
+      self.simpPhantomModel = slicer.util.loadModel(path)
+      self.simpPhantomModel.SetName('SimpPhantomModel')
+      self.simpPhantomModel.GetDisplayNode().SetColor(0,0.8,1.0)
 
   def setTransfoNode(self, tNode):
     self.transfoNode = tNode
-    self.simpPhantomModel.SetAndObserveTransformNodeID(self.transfoNode.GetID())
+    if self.rendering:
+      self.simpPhantomModel.SetAndObserveTransformNodeID(self.transfoNode.GetID())
 
   def watchTransfoNode(self, tof = True):
-    if not tof and self.obsId:
-      self.simpPhantomModel.RemoveObserver(self.obsId)
-    if tof:
-      self.obsId = self.simpPhantomModel.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
-          self.onTransformModified)
+    if self.rendering:
+      if not tof and self.obsId:
+        self.simpPhantomModel.RemoveObserver(self.obsId)
+      if tof:
+        self.obsId = self.simpPhantomModel.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
+            self.onTransformModified)
 
   def readWorkingVolumeFile(self, path):
     """
@@ -174,24 +180,25 @@ class WorkingVolume(vtk.vtkObject):
           if l.startswith('YAW'):
             self.yawAxis = p
 
-    # Setup cameras for working volume guidance
-    mag = abs(self.locs['TL'][2]) # magnitude of the depth of the working volume
-    # Top view of the working volume
-    self.renTop.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.yawAxis).tolist())
-    # initialize the cam far enough
-    self.renTop.GetActiveCamera().SetViewUp((-self.rollAxis).tolist())
-    # Front view of the working volume
-    self.renFront.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.rollAxis).tolist())
-    self.renFront.GetActiveCamera().SetViewUp(self.yawAxis.tolist())
+    if self.rendering:
+      # Setup cameras for working volume guidance
+      mag = abs(self.locs['TL'][2]) # magnitude of the depth of the working volume
+      # Top view of the working volume
+      self.renTop.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.yawAxis).tolist())
+      # initialize the cam far enough
+      self.renTop.GetActiveCamera().SetViewUp((-self.rollAxis).tolist())
+      # Front view of the working volume
+      self.renFront.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.rollAxis).tolist())
+      self.renFront.GetActiveCamera().SetViewUp(self.yawAxis.tolist())
 
-    if nodes:
-      self.actorTop.setNodes(nodes)
-      self.actorFront.setNodes(nodes)
-    else:
-      msg = "No nodes could be read in the working volume file"
-      logging.error(msg)
-      slicer.util.errorDisplay(msg)
-      return False
+      if nodes:
+        self.actorTop.setNodes(nodes)
+        self.actorFront.setNodes(nodes)
+      else:
+        msg = "No nodes could be read in the working volume file"
+        logging.error(msg)
+        slicer.util.errorDisplay(msg)
+        return False
 
     self.id = os.path.basename(path).split('.txt')[0] # retrieve filename only
     return True
