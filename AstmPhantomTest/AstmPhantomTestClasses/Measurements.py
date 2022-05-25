@@ -41,6 +41,10 @@ class SinglePointMeasurement(vtk.vtkObject):
     self.curLoc = None
     # acquisition number
     self.acquiNum = 0
+    # average measured position, used for comparison in rotation tests.
+    # if not the single point test is not performed, the default value is
+    # that of the ground truth
+    self.avgPos = self.gtPts[self.divot]
 
   def onDivDone(self, pos):
     self.acquiNum = self.acquiNum + 1
@@ -57,8 +61,10 @@ class SinglePointMeasurement(vtk.vtkObject):
 
   def __accuracyStats(self, measurements):
     if len(measurements) > 0:
-      # the length of the average error vector, not the average of errors
-      err = Dist(np.mean(measurements, axis = 0), self.gtPts[self.divot])
+      # update the average position
+      self.avgPos = np.mean(measurements, axis = 0)
+      # /!\ the length of the average error vector, not the average of errors
+      err = Dist(self.avgPos, self.gtPts[self.divot])
       maxerr = 0
       for m in measurements:
         maxerr = max(maxerr, Dist(m, self.gtPts[self.divot]))
@@ -135,14 +141,17 @@ class RotationMeasurement(vtk.vtkObject):
   # Reset current sequence
   def reset(self):
     self.curLoc = None
+    # base position for precision estimation, typically the averaged position
+    # measured in the Single Point Measurement
+    self.basePos = None
 
   # Calculate stats on measurements
   def __stats(self, meas):
-    if len(meas) > 0:
+    if len(meas) > 0 and self.basePos.any():
       # angle range (smallest and largest)
       rg = [min(meas[:,0]),max(meas[:,0])]
-      # RMS of deviations
-      rms = stdDist(meas[:,1:])
+      # RMS of deviations from base position
+      rms = RMS(meas[:,1:]-self.basePos)
       return {"num":len(meas), "rangeMin":rg[0], "rangeMax":rg[1],
         "span":Span(meas[:,1:]), "rms":rms}
     else:
