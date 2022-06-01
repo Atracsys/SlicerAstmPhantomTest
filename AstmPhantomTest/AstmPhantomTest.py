@@ -843,7 +843,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         p = self.workingVolume.locs[targetId]
         # if the location is at the top of the working volume, the pointer may go
         # out of the tracker's field of view
-        if targetId == "TL":
+        if targetId == "TL" and self.pointer.height > 0:
           # the target position is then offset downward by the phantom's height
           # from the central divot (z-coord of divots 43-47) + the pointer's height
           offset = self.phantom.gtPts[47][2] + self.pointer.height
