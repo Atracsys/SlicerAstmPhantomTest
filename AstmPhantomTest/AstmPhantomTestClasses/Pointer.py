@@ -69,6 +69,8 @@ class Pointer(vtk.vtkObject):
     self.stdPtrMat = np.identity(4)
     self.ptrRotMat = np.identity(4)
     self.trkRotMat = np.identity(4)
+    # pointer height (in mm, important for pointer visibility near top of the working volume)
+    self.height = 0
 
   def readModel(self, path):
     prevModelNode = slicer.mrmlScene.GetFirstNodeByName('PointerModel')
@@ -119,6 +121,8 @@ class Pointer(vtk.vtkObject):
         self.ptrPitchAxis = q.tolist()
       if l.startswith('YAW'):
         self.ptrYawAxis = q.tolist()
+      if l.startswith('HEIGHT'):
+        self.height = q[0]
     self.checkPtrAxes()
     # calculate the model transformation necessary to align with yaw and roll axes
     ptsFrom = vtk.vtkPoints()

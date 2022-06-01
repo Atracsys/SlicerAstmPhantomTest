@@ -177,14 +177,14 @@
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="3" column="0">
          <widget class="QLabel" name="workingVolumeFileLabel">
           <property name="text">
            <string>Working Volume</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
+        <item row="3" column="1">
          <widget class="QComboBox" name="workingVolumeFileSelector">
           <property name="enabled">
            <bool>false</bool>
@@ -194,7 +194,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="0">
+        <item row="2" column="0">
          <widget class="QLabel" name="groundTruthFileLabel">
           <property name="enabled">
            <bool>true</bool>
@@ -204,7 +204,7 @@
           </property>
          </widget>
         </item>
-        <item row="3" column="1">
+        <item row="2" column="1">
          <widget class="QComboBox" name="groundTruthFileSelector">
           <property name="enabled">
            <bool>false</bool>

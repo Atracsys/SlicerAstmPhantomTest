@@ -223,17 +223,19 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # call as the first item is automatically selected
       self.onPointerFileChanged()
 
+      # Parse resource folder for ground truth files (gt/SN____.txt)
+      gtFiles = [f for f in os.listdir(self.resourcePath('./gt')) if re.match(r'SN[0-9]+.*\.txt', f)]
+      self.ui.groundTruthFileSelector.addItems(gtFiles)
+      self.ui.groundTruthFileSelector.currentIndexChanged.connect(self.onGroundTruthFileChanged)
+      # call as the first item is automatically selected
+      self.onGroundTruthFileChanged()
+
       # Parse resource folder for working volume files (wv/____.txt)
       wvFiles = [f for f in os.listdir(self.resourcePath('./wv')) if re.match(r'.*\.txt', f)]
       self.ui.workingVolumeFileSelector.addItems(wvFiles)
       self.ui.workingVolumeFileSelector.currentIndexChanged.connect(self.onWorkingVolumeFileChanged)
       # call as the first item is automatically selected
       self.onWorkingVolumeFileChanged()
-
-      # Parse resource folder for ground truth files (gt/SN____.txt)
-      gtFiles = [f for f in os.listdir(self.resourcePath('./gt')) if re.match(r'SN[0-9]+.*\.txt', f)]
-      self.ui.groundTruthFileSelector.addItems(gtFiles)
-      self.ui.groundTruthFileSelector.currentIndexChanged.connect(self.onGroundTruthFileChanged)
 
       # Adding the observer watching out for the new transform node after openigtlink connection
       slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onNodeAdded)
@@ -838,9 +840,18 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       # check that target does not already exist, this may be possible as both locCheckBoxes
       # and readWorkingVolumeFile call addWorkingVolumeTarget
       if not targetId in self.wvTargetsTop.targets:
-        self.wvTargetsTop.addTarget(targetId, self.workingVolume.locs[targetId], True, False, 50)
+        p = self.workingVolume.locs[targetId]
+        # if the location is at the top of the working volume, the pointer may go
+        # out of the tracker's field of view
+        if targetId == "TL":
+          # the target position is then offset downward by the phantom's height
+          # from the central divot (z-coord of divots 43-47) + the pointer's height
+          offset = self.phantom.gtPts[47][2] + self.pointer.height
+          # yaw axis is supposed to be tracker's "upward" vector
+          p = p - self.workingVolume.yawAxis*offset
+        self.wvTargetsTop.addTarget(targetId, p, True, False, 50)
       if not targetId in self.wvTargetsFront.targets:
-        self.wvTargetsFront.addTarget(targetId, self.workingVolume.locs[targetId], True, False, 50)
+        self.wvTargetsFront.addTarget(targetId, p, True, False, 50)
   
   def removeWorkingVolumeTarget(self, targetId):
     self.wvTargetsTop.removeTarget(targetId)
