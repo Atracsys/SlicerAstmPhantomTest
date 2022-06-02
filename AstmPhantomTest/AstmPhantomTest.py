@@ -541,14 +541,6 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.logic.pointer.numFrames = val
       logging.info(f"Number of frames for point acquisition set to {self.logic.pointer.numFrames}")
 
-  @vtk.calldata_type(vtk.VTK_STRING)
-  def onTransfoNodeChanged(self, caller, event=None, calldata=None):
-    status = caller.GetAttribute("TransformStatus")
-    if status:
-      self.ui.refStatusValue.text = status
-    else:
-      self.ui.refStatusValue.text = "--"
-
   @vtk.calldata_type(vtk.VTK_OBJECT)
   def onNodeAdded(self, caller, event, calldata):
     """
@@ -574,14 +566,34 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     Called when a node has changed
     """
+    # set color with respect to status for each transform nodes
+    def colorStatus(qlabel):
+      if qlabel.text == "OK":
+        qlabel.setStyleSheet("QLabel { color : green; }")
+      elif qlabel.text == "MISSING":
+        qlabel.setStyleSheet("QLabel { color : red; }")
+      else:
+        qlabel.setStyleSheet("QLabel { color : black; }")
+
     if caller.GetName() == 'PointerToTracker':
       self.ui.ptrStatusValue.text = caller.GetAttribute("TransformStatus")
+      colorStatus(self.ui.ptrStatusValue)
     if caller.GetName() == 'PhantomToTracker':
       self.ui.refStatusValue.text = caller.GetAttribute("TransformStatus")
+      colorStatus(self.ui.refStatusValue)
     if caller.GetName() == 'PointerToPhantom':
       self.ui.ptrRefStatusValue.text = caller.GetAttribute("TransformStatus")
+      colorStatus(self.ui.ptrRefStatusValue)
     
-    # Checking that all transfo nodes are assigned and
+    # set frame border to red if one transform status is "MISSING"
+    if self.ui.ptrStatusValue.text != "OK" or \
+    self.ui.refStatusValue.text != "OK" or \
+    self.ui.ptrRefStatusValue.text != "OK":
+      self.ui.statusFrame.setStyleSheet("#statusFrame { border: 1px solid red; }")
+    else:
+      self.ui.statusFrame.setStyleSheet("#statusFrame { border: 1px solid green; }")
+    
+    # Checking that all transform nodes are assigned and
     # in tracker's field of view (transform status "OK")
     if self.waitingForAllNodes and self.ptrNode and self.refNode and self.ptrRefNode:
       if self.ptrNode.GetAttribute("TransformStatus") == "OK"  and \
