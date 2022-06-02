@@ -77,6 +77,7 @@ class WorkingVolume(vtk.vtkObject):
     self.renTop = renTop
     self.renFront = renFront
     self.rendering = self.renTop is not None and self.renFront is not None
+    self.modelsFolderPath = None
 
     if self.rendering:
       self.actorTop = WorkingVolumeActor()
@@ -143,42 +144,44 @@ class WorkingVolume(vtk.vtkObject):
     logging.info(path)
     file = open(path, 'r')
     lines = file.readlines()
+    self.modelName = None
     nodes = {}
     self.locs = {} # locations provided in the file
     for l in lines:
       if not l == "\n":
         ss = l.split('=') # split string
-        p = np.fromstring(ss[1], dtype=float, sep=' ')
-        logging.info(f'   {ss[0]} {p.tolist()}')
-        if l.startswith('NODE'):
-          nodes[int(p[0])] = p[1:]
-        elif l.startswith('MOVTOLMIN'):
-          # min moving tolerance is p[0] at depth p[1]
-          self.movingTolMin['tol'] = p[0]
-          self.movingTolMin['depth'] = p[1]
-        elif l.startswith('MOVTOLMAX'):
-          # max moving tolerance is p[0] at depth p[1]
-          self.movingTolMax['tol'] = p[0]
-          self.movingTolMax['depth'] = p[1]
+        if l.startswith('MODEL'):
+          self.modelName = ss[1].replace(" ", "") # store model name without space char
         else:
-          if l.startswith('CL'):
-            self.locs['CL'] = p
-            self.renTop.GetActiveCamera().SetFocalPoint(p.tolist())
-            self.renFront.GetActiveCamera().SetFocalPoint(p.tolist())
-          if l.startswith('BL'):
-            self.locs['BL'] = p
-          if l.startswith('TL'):
-            self.locs['TL'] = p
-          if l.startswith('LL'):
-            self.locs['LL'] = p
-          if l.startswith('RL'):
-            self.locs['RL'] = p
-          if l.startswith('ROLL'):
-            self.rollAxis = p
-          if l.startswith('PITCH'):
-            self.pitchAxis = p
-          if l.startswith('YAW'):
-            self.yawAxis = p
+          p = np.fromstring(ss[1], dtype=float, sep=' ')
+          logging.info(f'   {ss[0]} {p.tolist()}')
+          if l.startswith('NODE'):
+            nodes[int(p[0])] = p[1:]
+          elif l.startswith('MOVTOLMIN'):
+            # min moving tolerance is p[0] at depth p[1]
+            self.movingTolMin['tol'] = p[0]
+            self.movingTolMin['depth'] = p[1]
+          elif l.startswith('MOVTOLMAX'):
+            # max moving tolerance is p[0] at depth p[1]
+            self.movingTolMax['tol'] = p[0]
+            self.movingTolMax['depth'] = p[1]
+          else:
+            if l.startswith('CL'):
+              self.locs['CL'] = p
+            if l.startswith('BL'):
+              self.locs['BL'] = p
+            if l.startswith('TL'):
+              self.locs['TL'] = p
+            if l.startswith('LL'):
+              self.locs['LL'] = p
+            if l.startswith('RL'):
+              self.locs['RL'] = p
+            if l.startswith('ROLL'):
+              self.rollAxis = p
+            if l.startswith('PITCH'):
+              self.pitchAxis = p
+            if l.startswith('YAW'):
+              self.yawAxis = p
 
     if self.rendering:
       # Setup cameras for working volume guidance
@@ -190,6 +193,16 @@ class WorkingVolume(vtk.vtkObject):
       # Front view of the working volume
       self.renFront.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.rollAxis).tolist())
       self.renFront.GetActiveCamera().SetViewUp(self.yawAxis.tolist())
+      if self.modelsFolderPath and self.modelName:
+        prevModelNode = slicer.mrmlScene.GetFirstNodeByName('TrackerModel')
+        if prevModelNode:
+          slicer.mrmlScene.RemoveNode(prevModelNode)
+        logging.info("Read tracker model")
+        self.trackerModel = slicer.util.loadModel(self.modelsFolderPath + '/' + self.modelName + '_RAS.stl')
+        self.trackerModel.SetName('TrackerModel')
+        self.trackerModel.GetDisplayNode().SetColor(0.8, 0.8, 0.8)
+        self.trackerModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeFrontWV')
+        self.trackerModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeTopWV')
 
       if nodes:
         self.actorTop.setNodes(nodes)

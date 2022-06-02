@@ -30,3 +30,5 @@ MOVTOLMAX = 1.0 2350
 ROLL = 0 0 1
 PITCH = -1 0 0
 YAW = 0 -1 0
+
+MODEL = ftk250

@@ -25,3 +25,5 @@ MOVTOLMAX = 1.0 2850
 ROLL = 0 0 -1
 PITCH = 0 1 0
 YAW = -1 0 0
+
+MODEL = vega

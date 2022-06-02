@@ -132,8 +132,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       # Create logic class. Logic implements all computations that should be possible to run
       # in batch mode, without a graphical user interface.
-      self.logic = AstmPhantomTestLogic(self.resourcePath('phantomRAS.stl'),
-        self.resourcePath('pointerRAS.stl'), self.resourcePath('simpPhantomRAS.stl'),
+      self.logic = AstmPhantomTestLogic(self.resourcePath('models/phantom_RAS.stl'),
+        self.resourcePath('models/pointer_RAS.stl'), self.resourcePath('models/simpPhantom_RAS.stl'),
         self.resourcePath(''), savePath)
 
       # Forward some rendering handles to the logic class
@@ -157,8 +157,11 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.logic.phantom.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
       self.logic.pointer.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
       # Display of the simplified phantom to the working volume guidance scenes
+      self.logic.workingVolume.simpPhantomModel.GetDisplayNode().VisibilityOff()
       self.logic.workingVolume.simpPhantomModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeTopWV')
       self.logic.workingVolume.simpPhantomModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeFrontWV')
+      # Forward models folder path
+      self.logic.workingVolume.modelsFolderPath = self.resourcePath('models/')
 
       ## Connections
 
@@ -194,7 +197,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.hackTLButton.connect('clicked()', self.hackTL)
       self.ui.hackLLButton.connect('clicked()', self.hackLL)
       self.ui.hackRLButton.connect('clicked()', self.hackRL)
-      # self.ui.hackXButton.connect('clicked()', some callable function)
+      self.ui.hackXButton.connect('clicked()', self.logic.stopSinglePtTest)
 
       self.intval = qt.QIntValidator(1,999) # input validator for point acqui line edit
       self.ui.pointAcquiNumFramesLineEdit.setValidator(self.intval)
