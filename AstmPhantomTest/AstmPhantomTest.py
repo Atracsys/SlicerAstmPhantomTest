@@ -189,7 +189,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.locCheckBoxTL.connect('stateChanged(int)', self.onLocCheckBoxTLChanged)
       self.ui.locCheckBoxLL.connect('stateChanged(int)', self.onLocCheckBoxLLChanged)
       self.ui.locCheckBoxRL.connect('stateChanged(int)', self.onLocCheckBoxRLChanged)
-      self.ui.resCamButton.connect('clicked()', self.logic.placeCamWrtPhantom)
+      self.ui.resCamButton.connect('clicked()', self.logic.resetCam)
 
       self.ui.hackCalibButton.connect('clicked()', self.hackCalib)
       self.ui.hackCLButton.connect('clicked()', self.hackCL)
@@ -284,6 +284,9 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.locCheckBoxTL.checked = "TL" in self.logic.workingVolume.locs
       self.ui.locCheckBoxLL.checked = "LL" in self.logic.workingVolume.locs
       self.ui.locCheckBoxRL.checked = "RL" in self.logic.workingVolume.locs
+      # reset camera for renderers
+      ResetCameraScreenSpace(self.logic.topWVRenderer)
+      ResetCameraScreenSpace(self.logic.frontWVRenderer)
       # update moving tolerance slider
       self.onMovingTolSliderMoved()
       self.onMovingTolSliderReleased()
@@ -776,10 +779,28 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.tests = [['single',1], ['yaw',1], ['pitch',1], ['roll',1], ['dist',1]]
     self.InvokeEvent(self.testNamesUpdated, str([t[0] for t in self.tests]))
 
+    # make sure the correct scene is rendered
+    if self.mainWidget and self.topWVWidget and self.frontWVWidget:
+      self.mainWidget.hide()
+      self.topWVWidget.show()
+      self.frontWVWidget.show()
+      self.resetCam()
+
     # time beginning of process
     self.startTime = datetime.now()
 
     logging.info('All set !')
+
+  def resetCam(self):
+    if self.mainWidget.isVisible():
+      if len(self.testsToDo) == 0:
+        self.placeCamWrtPhantom(False)
+      elif self.testsToDo[0] in ['roll', 'pitch', 'yaw']:
+        self.placeCamWrtPhantom(True)
+      else:
+        self.placeCamWrtPhantom(False)
+    elif self.topWVWidget.isVisible() and self.frontWVWidget.isVisible():
+      self.workingVolume.resetCameras()
 
   def placeCamWrtPhantom(self, pointer = False):
     def placeCam(self, camPos, camDir):
@@ -864,7 +885,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
   def readGroundTruthFile(self, path):
     if self.phantom.readGroundTruthFile(path):
-      self.placeCamWrtPhantom()
+      self.placeCamWrtPhantom(False)
       return True
     else:
       return False
@@ -872,6 +893,11 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # --------------------- Calibration ---------------------
   def startPhantomCalibration(self):
     logging.info('Calibration started')
+    # make sure the correct scene is rendered
+    if self.mainWidget and self.topWVWidget and self.frontWVWidget:
+      self.mainWidget.show()
+      self.topWVWidget.hide()
+      self.frontWVWidget.hide()
     # if the phantom was already calibrated
     if self.phantom.calibrated:
       self.phantom.resetCalib()
@@ -977,10 +1003,12 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # --------------------- Working volume guidance ---------------------
   def startWorkingVolumeGuidance(self):
     logging.info('Starting working volume guidance')
+    # make sure the correct scene is rendered
     if self.mainWidget and self.topWVWidget and self.frontWVWidget:
       self.mainWidget.hide()
       self.topWVWidget.show()
       self.frontWVWidget.show()
+      self.workingVolume.simpPhantomModel.GetDisplayNode().VisibilityOn()
 
     slicer.app.processEvents() # makes sure the rendering/display is done before continuing
     if self.topWVRenderer:
@@ -1006,6 +1034,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.curLoc = cd[0]
     logging.info(f'   Phantom placed for location {self.curLoc} at {np.around(cd[1:4],2).tolist()}')
     self.sounds["touchdown"].play()
+    # make sure the correct scene is rendered
     if self.mainWidget and self.topWVWidget and self.frontWVWidget:
       self.mainWidget.show()
       self.topWVWidget.hide()

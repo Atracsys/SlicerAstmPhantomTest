@@ -84,7 +84,6 @@ class WorkingVolume(vtk.vtkObject):
       self.actorTop.GetProperty().SetColor(1,1,1)
       self.actorTop.GetProperty().SetOpacity(0.2)
       self.actorTop.edges.GetProperty().SetColor(0.2,1,0)  
-      self.renTop.GetActiveCamera().ParallelProjectionOn()
       self.renTop.AddActor(self.actorTop)
       self.renTop.AddActor(self.actorTop.edges)
 
@@ -92,7 +91,6 @@ class WorkingVolume(vtk.vtkObject):
       self.actorFront.GetProperty().SetColor(1,1,1)
       self.actorFront.GetProperty().SetOpacity(0.2)
       self.actorFront.edges.GetProperty().SetColor(1,0,0.8)
-      self.renFront.GetActiveCamera().ParallelProjectionOn()
       self.renFront.AddActor(self.actorFront)
       self.renFront.AddActor(self.actorFront.edges)
 
@@ -135,6 +133,31 @@ class WorkingVolume(vtk.vtkObject):
       if tof:
         self.obsId = self.simpPhantomModel.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, \
             self.onTransformModified)
+
+  def resetCameras(self):
+    # set cameras to parallel projection
+    self.renTop.GetActiveCamera().ParallelProjectionOn()
+    self.renFront.GetActiveCamera().ParallelProjectionOn()
+    # set the focal point to the center of the working volume
+    if 'CL' in self.locs:
+      self.renTop.GetActiveCamera().SetFocalPoint(self.locs['CL'].tolist())
+      self.renFront.GetActiveCamera().SetFocalPoint(self.locs['CL'].tolist())
+    # place the cameras
+    if 'TL' in self.locs and 'CL' in self.locs:
+      # magnitude of the depth of the working volume, used to place the cameras
+      # far enough before the reset to fill the scene
+      mag = abs(self.locs['TL'][2])
+      # Top view of the working volume
+      self.renTop.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.yawAxis).tolist())
+      self.renTop.GetActiveCamera().SetViewUp((-self.rollAxis).tolist())
+      # Front view of the working volume
+      self.renFront.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.rollAxis).tolist())
+      self.renFront.GetActiveCamera().SetViewUp(self.yawAxis.tolist())
+
+    # Reset cameras to fill viewport
+    ResetCameraScreenSpace(self.renTop)
+    slicer.app.processEvents() # let it breathe for a sec
+    ResetCameraScreenSpace(self.renFront)
 
   def readWorkingVolumeFile(self, path):
     """
@@ -183,16 +206,10 @@ class WorkingVolume(vtk.vtkObject):
             if l.startswith('YAW'):
               self.yawAxis = p
 
+    # if rendering is enabled, add the various 3D models to the scene
     if self.rendering:
-      # Setup cameras for working volume guidance
-      mag = abs(self.locs['TL'][2]) # magnitude of the depth of the working volume
-      # Top view of the working volume
-      self.renTop.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.yawAxis).tolist())
-      # initialize the cam far enough
-      self.renTop.GetActiveCamera().SetViewUp((-self.rollAxis).tolist())
-      # Front view of the working volume
-      self.renFront.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.rollAxis).tolist())
-      self.renFront.GetActiveCamera().SetViewUp(self.yawAxis.tolist())
+      self.resetCameras()
+      
       if self.modelsFolderPath and self.modelName:
         prevModelNode = slicer.mrmlScene.GetFirstNodeByName('TrackerModel')
         if prevModelNode:
