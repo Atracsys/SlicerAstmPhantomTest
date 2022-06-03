@@ -210,8 +210,12 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.logic.phantom.AddObserver(self.logic.phantom.calibratedEvent,
         self.onPhantomCalibrated)
       self.logic.wvTargetsTop.AddObserver(self.logic.wvTargetsTop.targetHitEvent, self.onLocHit)
-      self.logic.AddObserver(self.logic.sessionEndedEvent, self.onSessionEnded)
       self.logic.AddObserver(self.logic.testNamesUpdated, self.onTestNamesUpdated)
+      self.logic.AddObserver(self.logic.wvGuidanceStarted, self.onWorkingVolumeGuidanceStarted)
+      self.logic.AddObserver(self.logic.locationFinished, self.onLocationFinished)
+      self.logic.AddObserver(self.logic.testStarted, self.onTestStarted)
+      self.logic.AddObserver(self.logic.testFinished, self.onTestFinished)
+      self.logic.AddObserver(self.logic.sessionEndedEvent, self.onSessionEnded)
 
       # Initialize default values for UI elements
       self.ui.movingTolValue.setText(f'{self.logic.pointer.movingTol:.2f} mm')
@@ -373,19 +377,80 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     if loc in self.logic.workingVolume.locs: # check but should always be true
       if loc == "CL":
         self.ui.locCheckBoxCL.enabled = False
+        self.ui.locCheckBoxCL.setStyleSheet("#locCheckBoxCL { background-color: rgba(0,255,0,30%); }")
         self.ui.hackCLButton.enabled = False
       if loc == "BL":
         self.ui.locCheckBoxBL.enabled = False
+        self.ui.locCheckBoxBL.setStyleSheet("#locCheckBoxBL { background-color: rgba(0,255,0,30%); }")
         self.ui.hackBLButton.enabled = False
       if loc == "TL":
         self.ui.locCheckBoxTL.enabled = False
+        self.ui.locCheckBoxTL.setStyleSheet("#locCheckBoxTL { background-color: rgba(0,255,0,30%); }")
         self.ui.hackTLButton.enabled = False
       if loc == "LL":
         self.ui.locCheckBoxLL.enabled = False
+        self.ui.locCheckBoxLL.setStyleSheet("#locCheckBoxLL { background-color: rgba(0,255,0,30%); }")
         self.ui.hackLLButton.enabled = False
       if loc == "RL":
         self.ui.locCheckBoxRL.enabled = False
+        self.ui.locCheckBoxRL.setStyleSheet("#locCheckBoxRL { background-color: rgba(0,255,0,30%); }")
         self.ui.hackRLButton.enabled = False
+  
+  @vtk.calldata_type(vtk.VTK_STRING)
+  def onLocationFinished(self, caller, event, calldata):
+    loc = calldata
+    if loc == "CL":
+      self.ui.locCheckBoxCL.setStyleSheet("")
+    if loc == "BL":
+      self.ui.locCheckBoxBL.setStyleSheet("")
+    if loc == "TL":
+      self.ui.locCheckBoxTL.setStyleSheet("")
+    if loc == "LL":
+      self.ui.locCheckBoxLL.setStyleSheet("")
+    if loc == "RL":
+      self.ui.locCheckBoxRL.setStyleSheet("")
+
+  @vtk.calldata_type(vtk.VTK_STRING)
+  def onWorkingVolumeGuidanceStarted(self, caller, event = None, calldata = None):
+    self.ui.testCheckBox1.enabled = True
+    self.ui.testCheckBox2.enabled = True
+    self.ui.testCheckBox3.enabled = True
+    self.ui.testCheckBox4.enabled = True
+    self.ui.testCheckBox5.enabled = True
+
+  @vtk.calldata_type(vtk.VTK_STRING)
+  def onTestStarted(self, caller, event, calldata):
+    test = calldata
+    if test in self.logic.testsToDo: # check but should always be true
+      if test == self.logic.tests[0][0]:
+        self.ui.testCheckBox1.enabled = False
+        self.ui.testCheckBox1.setStyleSheet("#testCheckBox1 { background-color: rgba(0,255,0,30%); }")
+      if test == self.logic.tests[1][0]:
+        self.ui.testCheckBox2.enabled = False
+        self.ui.testCheckBox2.setStyleSheet("#testCheckBox2 { background-color: rgba(0,255,0,30%); }")
+      if test == self.logic.tests[2][0]:
+        self.ui.testCheckBox3.enabled = False
+        self.ui.testCheckBox3.setStyleSheet("#testCheckBox3 { background-color: rgba(0,255,0,30%); }")
+      if test == self.logic.tests[3][0]:
+        self.ui.testCheckBox4.enabled = False
+        self.ui.testCheckBox4.setStyleSheet("#testCheckBox4 { background-color: rgba(0,255,0,30%); }")
+      if test == self.logic.tests[4][0]:
+        self.ui.testCheckBox5.enabled = False
+        self.ui.testCheckBox5.setStyleSheet("#testCheckBox5 { background-color: rgba(0,255,0,30%); }")
+
+  @vtk.calldata_type(vtk.VTK_STRING)
+  def onTestFinished(self, caller, event, calldata):
+    test = calldata
+    if test == self.logic.tests[0][0]:
+      self.ui.testCheckBox1.setStyleSheet("")
+    if test == self.logic.tests[1][0]:
+      self.ui.testCheckBox2.setStyleSheet("")
+    if test == self.logic.tests[2][0]:
+      self.ui.testCheckBox3.setStyleSheet("")
+    if test == self.logic.tests[3][0]:
+      self.ui.testCheckBox4.setStyleSheet("")
+    if test == self.logic.tests[4][0]:
+      self.ui.testCheckBox5.setStyleSheet("")
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onSessionEnded(self, caller, event = None, calldata = None):
@@ -394,6 +459,11 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.locCheckBoxTL.enabled = False
     self.ui.locCheckBoxLL.enabled = False
     self.ui.locCheckBoxRL.enabled = False
+    self.ui.testCheckBox1.enabled = False
+    self.ui.testCheckBox2.enabled = False
+    self.ui.testCheckBox3.enabled = False
+    self.ui.testCheckBox4.enabled = False
+    self.ui.testCheckBox5.enabled = False
     self.ui.hackCalibButton.enabled = False
     self.ui.hackCLButton.enabled = False
     self.ui.hackBLButton.enabled = False
@@ -412,18 +482,38 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
   def onTestCheckBox1Changed(self, val):
     self.logic.tests[0][1] = val
+    if val and self.logic.tests[0][0] not in self.logic.testsToDo:
+      self.logic.testsToDo.append(self.logic.tests[0][0])
+    if not val and self.logic.tests[0][0] in self.logic.testsToDo:
+      self.logic.testsToDo.remove(self.logic.tests[0][0])
   
   def onTestCheckBox2Changed(self, val):
     self.logic.tests[1][1] = val
+    if val and self.logic.tests[1][0] not in self.logic.testsToDo:
+      self.logic.testsToDo.append(self.logic.tests[1][0])
+    if not val and self.logic.tests[1][0] in self.logic.testsToDo:
+      self.logic.testsToDo.remove(self.logic.tests[1][0])
   
   def onTestCheckBox3Changed(self, val):
     self.logic.tests[2][1] = val
+    if val and self.logic.tests[2][0] not in self.logic.testsToDo:
+      self.logic.testsToDo.append(self.logic.tests[2][0])
+    if not val and self.logic.tests[2][0] in self.logic.testsToDo:
+      self.logic.testsToDo.remove(self.logic.tests[2][0])
   
   def onTestCheckBox4Changed(self, val):
     self.logic.tests[3][1] = val
+    if val and self.logic.tests[3][0] not in self.logic.testsToDo:
+      self.logic.testsToDo.append(self.logic.tests[3][0])
+    if not val and self.logic.tests[3][0] in self.logic.testsToDo:
+      self.logic.testsToDo.remove(self.logic.tests[3][0])
   
   def onTestCheckBox5Changed(self, val):
     self.logic.tests[4][1] = val
+    if val and self.logic.tests[4][0] not in self.logic.testsToDo:
+      self.logic.testsToDo.append(self.logic.tests[4][0])
+    if not val and self.logic.tests[4][0] in self.logic.testsToDo:
+      self.logic.testsToDo.remove(self.logic.tests[4][0])
   
   def onLocCheckBoxCLChanged(self, val):
     if val:
@@ -711,7 +801,11 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.resourcePath = resourcePath
     self.savePath = savePath
     self.testNamesUpdated = vtk.vtkCommand.UserEvent + 1
-    self.sessionEndedEvent = vtk.vtkCommand.UserEvent + 2
+    self.wvGuidanceStarted = vtk.vtkCommand.UserEvent + 2
+    self.locationFinished = vtk.vtkCommand.UserEvent + 3
+    self.testStarted = vtk.vtkCommand.UserEvent + 4
+    self.testFinished = vtk.vtkCommand.UserEvent + 5
+    self.sessionEndedEvent = vtk.vtkCommand.UserEvent + 6
 
     # If rendering is used, 3D views and renderers are made available by the widget class
     self.mainWidget = None
@@ -960,6 +1054,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     # play sound
     self.sounds["plop"].play()
     cd = ast.literal_eval(calldata)  # parse [id, px, py, pz]
+    if not isinstance(cd, list):
+      cd = [cd]
     if cd[0] == self.phantom.lblO:
       self.phantom.calGtPts[self.phantom.lblO] = np.array(cd[1:4])
     if cd[0] == self.phantom.lblX:
@@ -1044,6 +1140,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         self.wvTargetsTop.onTargetFocus)
       self.wvgObs2 = self.wvTargetsTop.AddObserver(self.wvTargetsTop.targetHitEvent,
         self.stopWorkingVolumeGuidance)
+      self.InvokeEvent(self.wvGuidanceStarted)
     else:
       logging.info('====== All done, good job ^_^ ======')
       self.EndSession()
@@ -1077,8 +1174,10 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # ---------------------------- Tests Control -----------------------------
   def startNextTest(self):
     if len(self.testsToDo) == 0:
+      self.InvokeEvent(self.locationFinished, self.curLoc)
       self.startWorkingVolumeGuidance()
     else:
+      self.InvokeEvent(self.testStarted, self.testsToDo[0])
       if self.testsToDo[0] == 'single':
         self.startSinglePtTest()
       if self.testsToDo[0] == 'roll':
@@ -1158,6 +1257,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       m.basePos = self.singlePointMeasurement.avgPos
     # Reset
     self.singlePointMeasurement.reset()
+    self.InvokeEvent(self.testFinished, self.testsToDo[0])
     self.testsToDo.pop(0) # remove the test
     self.startNextTest()
 
@@ -1278,6 +1378,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
     self.curRotMeas.updateStats()
     self.curRotMeas.reset() # make it ready for next acquisition at a different location
+    self.InvokeEvent(self.testFinished, self.testsToDo[0])
     self.testsToDo.pop(0) # remove the test
     self.startNextTest()
 
@@ -1332,6 +1433,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targetsDone.RemoveAllObservers()
     # Reset
     self.distMeasurement.reset(self.phantom.seq)
+    self.InvokeEvent(self.testFinished, self.testsToDo[0])
     self.testsToDo.pop(0) # remove the test
     self.startNextTest()
 
