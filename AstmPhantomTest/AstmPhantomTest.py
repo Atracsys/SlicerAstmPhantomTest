@@ -640,21 +640,22 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     if not os.path.isfile(self.resourcePath('defaultCalibs.txt')):
       logging.info("defaultCalibs file not found !")
     else:
-        with open(self.resourcePath('defaultCalibs.txt'), 'r') as file:
-          if not self.logic.calibratingPhantom:
-            self.logic.startPhantomCalibration()
-          lines = file.readlines()
-          iLines = [i for i, s in enumerate(lines)]
-          for i in iLines:
-            # if line matches current working volume id
-            if lines[i].startswith(self.logic.workingVolume.id):
-              logging.info('~~~~~~~~~~~~ Hack calib ! ~~~~~~~~~~~~')
-              for l in [lines[i+1], lines[i+2],lines[i+3]]: # take the three next lines
-                if l.startswith("O =") or l.startswith("X =") or l.startswith("Y ="): # simple check
-                  lp = l.split("=")[1].split()
-                  cd = str([int(lp[0]), float(lp[1]),float(lp[2]),float(lp[3])])
-                  logging.info(cd)
-                  self.logic.onCalibrationPointDoneOut(self.logic, 0, cd)
+      with open(self.resourcePath('defaultCalibs.txt'), 'r') as file:
+        if not self.logic.calibratingPhantom:
+          self.logic.startPhantomCalibration()
+        lines = file.readlines()
+        iLines = [i for i, s in enumerate(lines)]
+        for i in iLines:
+          # if line matches current working volume id
+          if lines[i].startswith(self.logic.workingVolume.id):
+            logging.info('~~~~~~~~~~~~ Hack calib ! ~~~~~~~~~~~~')
+            for l in [lines[i+1], lines[i+2],lines[i+3]]: # take the three next lines
+              if l.startswith("O =") or l.startswith("X =") or l.startswith("Y ="): # simple check
+                lp = l.split("=")[1].split()
+                cd = str([int(lp[0]), float(lp[1]),float(lp[2]),float(lp[3])])
+                logging.info(cd)
+                self.logic.onCalibrationPointDone(self.logic, 0, cd)
+                self.logic.onCalibrationPointDoneOut(self.logic, 0, cd)
 
   def hackLoc(self, loc):
     if loc in self.logic.workingVolume.locs:
