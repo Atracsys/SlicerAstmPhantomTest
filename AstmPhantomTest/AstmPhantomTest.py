@@ -1169,6 +1169,10 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     logging.info(f'***** [{self.curLoc}] {self.curRotAxisName} Rotation Test Start *****')
     self.curRotMeas.curLoc = self.curLoc # assign current location
     self.curRotMeas.measurements[self.curLoc] = np.empty((0,4), float)
+    # if base position not defined by Single Point Test, use our best estimate of
+    # it, which comes from the calibration
+    if self.curRotMeas.basePos is None:
+      self.curRotMeas.basePos = self.phantom.calGtPts[self.phantom.centralDivot]
     if not self.angleAnn:
       self.angleAnn = vtk.vtkCornerAnnotation()
       self.angleAnn.GetTextProperty().SetFontSize(180)
