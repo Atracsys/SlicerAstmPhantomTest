@@ -1,7 +1,8 @@
 # ASTM Phantom Test
-This software is a module for [3D Slicer](https://www.slicer.org) to perform the accuracy test of a tracking system as described in the [standard ASTM F2554](https://www.astm.org/f2554-18.html). (:warning: The procedures described hereafter slightly follow the guidelines outlined in a revised version of the standard to be adopted in late 2022).
+This software is a module for [3D Slicer](https://www.slicer.org) to perform the accuracy test of a tracking system as described in the [standard ASTM F2554](https://www.astm.org/f2554-18.html).
+(:warning: The present procedures are based on the guidelines outlined in the upcoming revision of the standard due to late 2022).
 
-This test relies on a calibration object, hereafter referred to as the "phantom", of known dimensions. Performing measurements on such a phantom provides a reliable assessment of the tracking system accuracy and precision.
+This test relies on a calibration object, hereafter referred to as the "phantom", of known dimensions measured by a [CMM](https://en.wikipedia.org/wiki/Coordinate-measuring_machine). Performing measurements on such a phantom provides a reliable assessment of the tracking system accuracy and precision.
 
 # Table of contents
 - [Material](#material)
@@ -21,7 +22,7 @@ This test relies on a calibration object, hereafter referred to as the "phantom"
 
 # Material<a name="material"></a>
 To perform the test, the following items are necessary:
-- [ ] A **phantom** with an array of divots and a reference tracked array rigidly attached. See the [standard](https://www.astm.org/f2554-18.html) for requirements and recommendations for its design and manufacturing.
+- [ ] A **phantom** with a distribution of divots and a reference tracked array rigidly attached. See the [standard](https://www.astm.org/f2554-18.html) for requirements and recommendations regarding phantom design and manufacturing.
 - [ ] The tested **tracking system**, typically including
   - [ ] A **pointer** composed of a tracked array and a shaft with a pointy end fitting the divots.
   - [ ] A **tracker** which spatially locates the various arrays aforementionned. Various technologies can be utilized (optical, magnetic, etc).
@@ -29,12 +30,12 @@ To perform the test, the following items are necessary:
 
 # Required software<a name="requiredSoft"></a>
 ## PLUS Toolkit<a name="plusInstall"></a>
-[PLUS Toolkit](https://plustoolkit.github.io/) is a free, open-source set of software tools for Computer-Assisted Surgery, which includes a wrapper for SDK's from many manufacturers of tracking systems. This enables a standardization of the tracking data streaming from the tracker to the computer, thanks to an [OpenIGTLink](http://openigtlink.org) server (the **Plus Server**).
+[PLUS Toolkit](https://plustoolkit.github.io/) is a free, open-source set of software tools for Computer-Assisted Surgery, which includes a wrapper for SDK's from many manufacturers of tracking systems. This enables a standardization of the tracking data streaming from the tracker to the computer, thanks to an [OpenIGTLink](http://openigtlink.org) server (i.e. the **Plus Server**).
 
 ### Installation<a name="plusDownload"></a>
-Pre-built installers more than twenty systems are available for Windows from the [Download page](https://plustoolkit.github.io/download.html). To know which installer to choose, the user may refer to the table at the bottom of that page. Until a new stable release is available, it is important to download from the **Latest Development Snapshot**, as it includes new features necessary for the tests.
+Pre-built installers for more than twenty systems are available for Windows from the [Download page](https://plustoolkit.github.io/download.html). To know which installer to choose, the user may refer to the table at the bottom of that page. Until a new stable release is available, it is important to download from the **Latest Development Snapshot**, as it includes new features necessary for the tests.
 
-:warning: PLUS Toolkit offers a wrapper to a system SDK, but **does not include the actual SDK**, which needs to be installed separately on the computer. Moreover, there may be a version requirement (e.g, the Atracsys SDK has to be 4.5.2 or more recent).
+:warning: PLUS Toolkit offers a wrapper to a system SDK, but **may not include the actual SDK**, which needs to be installed separately on the computer. Moreover, there may be a version requirement (e.g, the Atracsys SDK has to be 4.5.2 or more recent).
 
 To install on Linux or Mac OS, please refer to the [Developer's guide](https://plustoolkit.github.io/developersguide).
 
@@ -51,13 +52,15 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
    Description="Broadcasting through OpenIGTLink the tracking data from a pointer with respect to a phantom."/>
   <Device
    Id="TrackerDevice"
-   Type="CompanyTracker"
+   Type="___Some___Tracker___"
    MaxMissingFiducials="0"
    MaxMeanRegistrationErrorMm="1.0"
    ToolReferenceFrame="Tracker" >
    <DataSources>
-    <DataSource Type="Tool" Id="Phantom" TrackingType="PASSIVE" GeometryFile="geometries/geomPhant.ini" />
-    <DataSource Type="Tool" Id="Pointer" TrackingType="PASSIVE" GeometryFile="geometries/array02.ini" />
+    <DataSource Type="Tool" Id="Phantom" TrackingType="PASSIVE"
+                GeometryFile="geometries/___Some___Geometry___1" />
+    <DataSource Type="Tool" Id="Pointer" TrackingType="PASSIVE"
+                GeometryFile="geometries/___Some___Geometry___2" />
    </DataSources>
    <OutputChannels>
     <OutputChannel Id="TrackerStream">
@@ -125,7 +128,7 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
 
 * The `OutputChannel` will be composed of the two streams of our `DataSources` so `Phantom` and `Pointer`
 
-* The Plus Server is an OpenIGTLink server, which sends messages of type `TRANSFORM`. These represent 4x4 matrices describing the transform from one item to another. For the ASTM Phantom Test, we need three transforms:
+* <a name="transformsStream"></a>The Plus Server is an OpenIGTLink server, which sends messages of type `TRANSFORM`. These represent 4x4 matrices describing the transform from one item to another. For the ASTM Phantom Test, we need three transforms:
   - the transform from the pointer (`Pointer`) to the phantom (`Phantom`), which results in `PointerToPhantom`
   - the transform from the phantom (`Phantom`) to the tracker (`Tracker`), which results in `PhantomToTracker`
   - the transform from the pointer (`Pointer`) to the tracker (`Tracker`), which results in `PointerToTracker`
@@ -139,7 +142,7 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
 [3D Slicer](https://www.slicer.org) (or "Slicer" for short) is a free, open-source software dedicated to medical image analysis. One of strengths of Slicer is its modularity, as it is possible to develop extensions to further expand its features or use its platform to create a dedicated software. The latter is the approach chosen for this project. Our Slicer module sets up an **OpenIGTLink client**, connects to the **Plus Server** and receives and analyzes the tracking data to perform the ASTM Phantom Test.
 
 ### Installation
-From Slicer's [download page](https://download.slicer.org), choose the **Preview Release** corresponding to the computer OS. Do not download the Stable Release, as it does yet not include all necessary features.
+From Slicer's [download page](https://download.slicer.org), download and install the latest stable release corresponding to the computer OS.
 Moreover, since our module requires Slicer to run an OpenIGTLink client, the extension **SlicerOpenIGTLink** also needs to be installed. To do so, start Slicer and head to the Extensions Manager and install the extension as shown below.
 
 ![Extension Manager Button](/readme_img/ext_manager_button.svg)
@@ -163,13 +166,14 @@ The ASTM Phantom Test module is now installed and a shortcut for it can be set i
 The module relies on several parameter files to accomodate for the hardware used.
 
 ## Pointer file<a name="pointerFile"></a>
-Located in `AstmPhantomTest\Resources\ptr`, this parameter file contains the maximum tilt angle (`MAXTILT`) beyond which the pointer manufacturer does not guarantee tracking.
+Located in `AstmPhantomTest\Resources\ptr`, this parameter file contains the maximum tilt angle (`MAXTILT`, in degrees) beyond which the pointer manufacturer does not guarantee tracking.
 This value typically depends on the type of tracking technology and that of the fiducials/markers attached to the pointer.
 The parameter file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the pointer**. This information allows a correct interpretation of the pointer rotations with respect to the tracker as well as a correct orientation of the 3D pointer model in the display.
+Finally, the file contains the pointer height (`HEIGHT`, in mm) to accomodate for pointer tracking while the phantom nears the top of the working volume. This consists in placing the top target location for the phantom ([`TL`](#wvFile)) with a downward offset of `HEIGHT` + the elevation of the highest divot (e.g, #47) from the central divot ([`CTR`](#phantomFile)). If `HEIGHT` is set to 0, then there is no compensation.
 
 ## Working volume file<a name="wvFile"></a>
 Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various information:
-- the coordinates of the locations that the phantom should be placed at in the working volume. Beside the center location (`CL`), all other locations lie at the edges of the working volume, as described in the ASTM standard. The four other locations are placed on the outer boundaries of the back plane. `BL` is located at the bottom, `TL` at the top, `LL` at the left and `RL` at the right. All these coordinates are expressed in the referential of the tracker.
+- the coordinates of the various locations that the phantom should be placed at in the working volume. Beside the center location (`CL`), all other locations lie at the edges of the working volume, as described in the ASTM standard. The four other locations are placed on the outer boundaries of the back plane. `BL` is located at the bottom, `TL` at the top, `LL` at the left and `RL` at the right. All these coordinates are expressed in the referential of the tracker.
 
 ![Locations](/readme_img/wv_locations_light.svg#gh-light-mode-only)
 ![Locations](/readme_img/wv_locations_dark.svg#gh-dark-mode-only)
@@ -183,8 +187,10 @@ Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various 
 
 - the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**. This information allows a correct interpretation of the pointer rotations with respect to the tracker.
 
+- the model name of the tracker (`MODEL`) is also given in the working volume file. The name has to match one of the models included in `AstmPhantomTest\Resources\models`. For example, `MODEL = ftk500` will prompt the software to load the 3D model `ftk500_RAS.stl`.
+
 ## Phantom file<a name="phantomFile"></a>
-Located in `AstmPhantomTest\Resources\gt`, this parameter file describes the divots on the phantom and their use. All the divots coordinates are listed (`POINT id`,`X`,`Y`,`Z`) and given in the referential frame of the phantom. This referential frame is defined by three divots which ids are given by `REF` in the following order O, X and Y.
+Located in `AstmPhantomTest\Resources\gt`, this parameter file describes the divots on the phantom and their use. All the divots coordinates are listed (`POINT id`,`X`,`Y`,`Z`) and given **in the referential frame of the phantom**. This referential frame is defined by three divots which ids are given by `REF` in the following order O, X and Y.
 
 The sequence of divots used for the multi-point test is given by `SEQ` and the id of the central divot (used for all the other tests) is given by `CTR`.
 
@@ -245,19 +251,23 @@ Once Slicer is started, the ASTM Phantom Test module can be accessed via the dro
 ### Preliminary steps
 When the module starts, a dialog window pops up and the user has to select the folder where the [output files](#results) (including the log) will be saved.
 
-Then, if the setup is correct, a 3D view of the phantom should appear as below, with **no visible pointer**.
+On the left panel, the tracking status of the pointer and the reference array (attached to the phantom) is displayed. These labels correspond to the three [transforms streamed](#transformsStream) by the Plus Server and show up either as `OK` or `MISSING`.
 
-![Good start view](/readme_img/start_ok.svg)
+![Status missing](/readme_img/status_missing.png)
 
-If the phantom model appears from another angle with a **yellow visible pointer**, then there is a problem of communication between Slicer and the Plus Server (see [Throubleshooting](#noCommunication)).
+The program won't start until both the pointer and the phantom reference array are being tracked (even briefly), i.e. until all transforms are displayed as `OK`.
 
-![Wrong start views](/readme_img/start_wrong.svg)
+![Status ok](/readme_img/status_ok.png)
 
-On the left, there is a parameter panel that requires user input. First, the tracker serial number is prompted (1).
+Once the program is started, the working volume and the target locations are previewed from the top and the front of the scene. The choice in working volume may be changed while [setting the parameters](#parameterSetting) in the left panel.
+
+![Top and front views](/readme_img/views.svg)
+
+The first parameter the operator is expected to input is the tracker serial number (1).
 
 ![Parameter input 1](/readme_img/parameter_input1.svg)
 
-Once filled in, the other parameters are unlocked and the user can choose the appropriate [pointer file](#pointerFile) (2), [working volume file](#wvFile) (3) and [phantom file](#phantomFile) (4). The user also has to choose the [point acquisition mode](#ptAcquiMode) (5) and input his id in the `Operator` field (6).
+<a name="parameterSetting"></a>Once filled in, the other parameters are unlocked and the user can choose the appropriate [pointer file](#pointerFile) (2), [phantom file](#phantomFile) (3) and [working volume file](#wvFile) (4). The user also has to choose the [point acquisition mode](#ptAcquiMode) (5) and input his id in the `Operator` field (6).
 
 ![Parameter input 2](/readme_img/parameter_input2.svg)
 
@@ -268,28 +278,28 @@ Once filled in, the other parameters are unlocked and the user can choose the ap
 
 Once the operator id is filled in, the choice in locations is unlocked (7). By default, all [five locations](#wvFile) in the working volume are enabled as recommended by the standard, but the user can, at any time during the session, to disable and skip locations if necessary. <a name="enableTests"></a>Likewise, by default all five tests are enabled (8) as recommended by the standard, but the user can disable certain tests **before** the phantom hits a target location in the working volume, if necessary.
 
-The [moving tolerance](#movTol) slidebar (9) allows the user to monitor and adjust the sensibility to pointer motion. The `Reset Camera` button (10) resets the view of the phantom to an optimum at any time, if the user happened to have moved the scene around with the mouse.
+The [moving tolerance](#movTol) slidebar (9) allows the user to monitor and adjust the sensibility to pointer motion. The operator may interact with the 3D scene with the mouse and the optimal view can be automatically reset with the `Reset Camera` button (10).
 
 ![Locations & tests](/readme_img/locations_tests.svg)
 
-The filling in of operator id also triggers the phantom calibration, which determines the geometrical relationship between the referential frame of the phantom (and thereby its divots) and the reference array attached to it. To perform the calibration, the user only needs to successively pick three separate divots that defines the referential frame (indicated in the [phantom file](#phantomFile) by `REF`).
+The filling in of operator id also triggers the phantom calibration, which determines the geometrical relationship between the coordinate system of the phantom (and thereby its divots) and the reference array attached to it. To perform the calibration, the user only needs to successively pick three separate divots that defines the referential frame (indicated in the [phantom file](#phantomFile) by `REF`).
 
 |<a name="acquiMech"></a>For any **point acquisition**, the targets are indicated by a red sphere and their id. Once the pointer hit the target (the correct divot), the point acquisition starts, indicated by the target becoming smaller and greener. The duration of the acquisition depends on the [point acquisition mode](#ptAcquiMode). The point acquisition is done when the target becomes large and green, and a "pop" sound is played. Removing the pointer from the divot then prompts the program to show the next target, if any. Removing the pointer before the point acquisition is done will reset the current target.|
 |---|
 
 ![Calibration](/readme_img/calib.svg)
 
-Once the calibration is over, the actual tests may start but first the phantom needs to be placed at one of the designated locations in the working volume. To help the user in this task, the interface switches to "working volume guidance" by showing a top view of the working volume on the left and a front view on the right. In these views, the user can see where the phantom is located with respect to the target locations, indicated by red spheres. Once the phantom is stabily placed at one of the enabled locations, a particular sound is played and the first test starts.
+Once the calibration is over, the actual tests may start but first the phantom needs to be placed at one of the designated locations in the working volume. To help the user in this task, the interface switches back to "working volume guidance". In the top and front views, the user can now see where the phantom is located with respect to the target locations. Once the phantom is stabily placed at one of the enabled locations, a specific sound is played and the first test starts.
 
 ![Working volume guidance](/readme_img/wv_guidance.svg)
 
 ### Single Point Test
-Referred to as the *Single Point Accuracy and Precision Test* in the ASTM standard, this test aims at assessing the performance of the tracking system for a single point measurements. To do so, the user must repeatedly acquire the central divot for a certain number of times. The progression of the test is displayed in the top right corner.
+Referred to as the *Single Point Accuracy and Precision Test* in the ASTM standard, this test aims at assessing the performance of the tracking system for single point measurements. To do so, the user must repeatedly acquire the central divot for a certain number of times. The progression of the test is displayed in the top right corner.
 
 ![Single point test](/readme_img/tests_single.png)
 
 ### Rotation Tests
-As described in the ASTM standard, these *Rotation Tests* aim at assessing the stability in measurement of a single point while the pointer rotates around specific axes (roll, pitch, yaw). The definition of these axes are defined in the [pointer file](#pointerFile) and in the [working volume file](#wvFile) in their respective referential frames.
+As described in the ASTM standard, these *Rotation Tests* aim at assessing the stability in measurement of a single point while the pointer rotates around specific axes (roll, pitch, yaw). The definition of these axes are defined in the [pointer file](#pointerFile) and in the [working volume file](#wvFile) in their respective coordinate system.
 
 To start the test, the user must lodge the pointer in the central divot, which will toggle the display of the pointer angles with respect to each rotation axes. The current rotation axis to be measured is highlighted by the symbols > and <. The pointer must be **rotated only around that specific axis**, i.e. the other angles shall remain as close to 0 as possible during the test.
 
