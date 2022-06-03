@@ -243,6 +243,12 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # Adding the observer watching out for the new transform node after openigtlink connection
       slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onNodeAdded)
 
+      # Adding welcome message
+      self.welcomeText = vtk.vtkCornerAnnotation()
+      self.welcomeText.GetTextProperty().SetFontSize(200)
+      self.welcomeText.SetText(2, "Welcome to the ASTM Phantom Test module.\nTo start, make sure that both the pointer and\nthe reference array attached to the phantom\nare visible by the tracker.\n<--")
+      self.logic.mainRenderer.AddActor(self.welcomeText)
+
       # Test if OpenIGTLink connection already open
       testNode = slicer.mrmlScene.GetFirstNodeByName('PointerConnector')
       if testNode != None: # if so, remove it
@@ -601,6 +607,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ptrRefNode.GetAttribute("TransformStatus") == "OK":
         self.waitingForAllNodes = False
         logging.info('onNodeChanged: all required transform nodes are valid, let\'s process!')
+        self.logic.mainRenderer.RemoveActor(self.welcomeText)
         self.ui.trackerLineEdit.enabled = True
         self.ui.trackerLineEdit.setFocus()
         self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
