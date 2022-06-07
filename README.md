@@ -168,7 +168,7 @@ The module relies on several parameter files to accomodate for the hardware used
 ## Pointer file<a name="pointerFile"></a>
 Located in `AstmPhantomTest\Resources\ptr`, this parameter file contains the maximum tilt angle (`MAXTILT`, in degrees) beyond which the pointer manufacturer does not guarantee tracking.
 This value typically depends on the type of tracking technology and that of the fiducials/markers attached to the pointer.
-The parameter file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the pointer**. This information allows a correct interpretation of the pointer rotations with respect to the tracker as well as a correct orientation of the 3D pointer model in the display.
+<a name="ptrRotAxes"></a>The parameter file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the pointer**. This information allows a correct interpretation of the pointer rotations with respect to the tracker as well as a correct orientation of the 3D pointer model in the display.
 Finally, the file contains the pointer height (`HEIGHT`, in mm) to accomodate for pointer tracking while the phantom nears the top of the working volume. This consists in placing the top target location for the phantom ([`TL`](#wvFile)) with a downward offset of `HEIGHT` + the elevation of the highest divot (e.g, #47) from the central divot ([`CTR`](#phantomFile)). If `HEIGHT` is set to 0, then there is no compensation.
 
 ## Working volume file<a name="wvFile"></a>
@@ -185,7 +185,7 @@ Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various 
 
 - the moving tolerance<a name="movTol"></a> is the threshold that separates actual pointer motion from the slight "wiggle" that typically occurs with most tracking technologies even when the pointer tip is static. Since the magnitude of this wiggle often depends on the distance to the tracker, the range for the moving tolerance is given by two extreme values. `MOVTOLMIN` sets the minimum threshold when the pointer is the closest possible to the tracker (e.g, 0.4mm at 920mm in depth) and `MOVTOLMAX` the maximum when the pointer is the farthest possible (e.g, 1.0mm at 2850mm in depth). The **moving tolerance is automatically set by the module** during the tests within the provided range. Nonetheless, if the user experiences trouble acquiring a divot because the program keeps detecting tip motion when there is none, the moving tolerance can be manually increased live (see [troubleshoot](#tbRemainingStatic)).
 
-- the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**. This information allows a correct interpretation of the pointer rotations with respect to the tracker.
+- <a name="wvRotAxes"></a>the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**. This information allows a correct interpretation of the pointer rotations with respect to the tracker.
 
 - the model name of the tracker (`MODEL`) is also given in the working volume file. The name has to match one of the models included in `AstmPhantomTest\Resources\models`. For example, `MODEL = ftk500` will prompt the software to load the 3D model `ftk500_RAS.stl`.
 
@@ -339,9 +339,15 @@ Once all the enabled tests for all the enabled locations are done, the program g
    - Check that the computer is well configured for the tracking system as per the manufacturer's guidelines (typically network configuration if connected through ethernet).
    - Check that the [configuration file](#configFile) has been correctly written.
 
-3. <a name="noCommunication"></a>*I don't have the phantom well-oriented at the beginning and I see the yellow pointer.* => There is a problem of communication between Slicer and the Plus Server.
+3. <a name="noCommunication"></a>*The status for the phantom and/or the pointer remains MISSING despite being visible by the tracker.* => There is a problem of communication between Slicer and the Plus Server.
    - Check that the Plus Server is launched **with the appropriate configuration file** and successfully connected to the tracking system.
    - In Slicer, head to the Transforms module via the dropdown menu and check the Active Transform list at the top. If "PhantomToTracker" or "PointerToTracker" is missing, check that the [geometry files](#geometryFile) are correct and that their paths in the configuration file are valid.
 
 4. <a name="tbOutOfTracking"></a>*I can't naturally trigger the out of tracking of the pointer during the rotation tests.*
    - See the recommendation for [artificially ending the rotation measurements](#artifOutOfTracking) prematurly.
+   
+5. <a name="tbWrongOrientation"></a>*The pointer is misoriented in the rendering and/or the angle values are not near 0 when "facing" the tracker.*
+   - There is a mismatch between the rotation axes in the tracker's coordinate system (in the [working volume file](#wvRotAxes)) and the rotation axes in the pointer's coordinate system (in the [pointer file](#ptrRotAxes)). Those axes should be the same in the world's coordinate system.
+
+![RotationAxes](/readme_img/rotation_axes_light.svg#gh-light-mode-only)
+![RotationAxes](/readme_img/rotation_axes_dark.svg#gh-dark-mode-only)
