@@ -29,6 +29,8 @@ class SinglePointMeasurement(vtk.vtkObject):
       self.divot = 1
     # stores the measurements for each location
     self.measurements = {}
+    # stack of all performed measurements, not categorized by location
+    self.allMeasurements = np.empty((0,3), float)
     self.precisionStats = {} # stores the precision stats for each location
     self.accuracyStats = {} # stores the accuracy stats for each location
     self.reset()
@@ -52,6 +54,8 @@ class SinglePointMeasurement(vtk.vtkObject):
     if self.acquiNum < self.acquiNumMax:
       logging.info(f"   {self.acquiNumMax - self.acquiNum} acquisition(s) left "
         f"for central divot #{self.divot}")
+    else:
+      self.allMeasurements = np.append(self.allMeasurements, self.measurements[self.curLoc], axis=0)
     self.updatePrecisionStats()
     self.updateAccuracyStats()
 
@@ -79,11 +83,21 @@ class SinglePointMeasurement(vtk.vtkObject):
         self.accuracyStats[self.curLoc] = s
       logging.info(f'¤¤¤¤¤¤ Accuracy ({s["num"]}): avg err = {s["avg err"]:.2f}, '
         f'max = {s["max"]:.2f} ¤¤¤¤¤¤')
+      # and update global stats
+      self.accuracyStats["ALL"] = self.__accuracyStats(self.allMeasurements)
 
   def __precisionStats(self, measurements):
     if len(measurements) > 0:
       # stdDist = RMS of deviations from mean
       return {'num':len(measurements), 'span': Span(measurements), 'rms': stdDist(measurements)}
+    else:
+      return {'num':0, 'span':0, 'rms':0}
+
+  def __precisionStatsAll(self):
+    if len(self.allMeasurements) > 0:
+      # Compute RMS of all rms per location
+      rmss = [self.precisionStats[p]['rms'] for p in self.precisionStats]
+      return {'num':len(self.allMeasurements), 'span': Span(self.allMeasurements), 'rms': RMS(rmss)}
     else:
       return {'num':0, 'span':0, 'rms':0}
 
@@ -97,6 +111,8 @@ class SinglePointMeasurement(vtk.vtkObject):
       if self.curLoc:
         self.precisionStats[self.curLoc] = s
       logging.info(f'¤¤¤¤¤¤ Precision ({s["num"]}): span = {s["span"]:.2f}, rms = {s["rms"]:.2f} ¤¤¤¤¤¤')
+      # and update global stats
+      self.precisionStats["ALL"] = self.__precisionStatsAll()
 
 #
 # Rotation Measurement class
@@ -117,6 +133,8 @@ class RotationMeasurement(vtk.vtkObject):
   def fullReset(self):
     # stores the measurements for each location
     self.measurements = {}
+    # stack of all performed measurements, not categorized by location
+    self.allMeasurements = np.empty((0,4), float)
     self.stats = {}
     self.reset()
 
@@ -139,6 +157,19 @@ class RotationMeasurement(vtk.vtkObject):
     else:
       return {"num":0, "rangeMin":0, "rangeMax":0, "span":0, "rms":0}
 
+  # Calculate stats for ALL
+  def __statsAll(self):
+    if len(self.allMeasurements) > 0:
+      # angle range (intersection of ranges at every locations)
+      rg = [max([self.stats[p]['rangeMin'] for p in self.stats]),
+        min([self.stats[p]['rangeMax'] for p in self.stats])]
+      # Compute RMS of all rms per location
+      rmss = [self.stats[p]['rms'] for p in self.stats]
+      return {'num':len(self.allMeasurements), "rangeMin":rg[0], "rangeMax":rg[1],
+        'span': Span(self.allMeasurements[:,1:]), 'rms': RMS(rmss)}
+    else:
+      return {"num":0, "rangeMin":0, "rangeMax":0, "span":0, "rms":0}
+
   # Update the current and global statistics
   def updateStats(self):
     if len(self.measurements[self.curLoc]) > 0:
@@ -149,6 +180,10 @@ class RotationMeasurement(vtk.vtkObject):
       logging.info(f'¤¤¤¤¤¤ Rotation [{self.rotAxisName}] ({s["num"]} samples): '
         f'Range <{s["rangeMin"]:.2f}°, {s["rangeMax"]:.2f}°>; Span {s["span"]:.2f}; '
         f'RMS {s["rms"]:.2f} ¤¤¤¤¤¤')
+      
+      # and update global stats
+      self.allMeasurements = np.append(self.allMeasurements, self.measurements[self.curLoc], axis = 0)
+      self.stats["ALL"] = self.__statsAll()
 
 #
 # Distances Measurement class
@@ -166,7 +201,9 @@ class DistMeasurement(vtk.vtkObject):
     self.gtPts = gtPts
     # stores the measurements for each location
     self.measurements = {}
+    self.allDistErrors = [] # stores all the distance errors, without sorting by location
     self.distStats = {}
+    self.allRegErrors = [] # stores all the registration errors, without sorting by location
     self.regStats = {}
     self.reset(divotsToDo)
 
@@ -213,6 +250,9 @@ class DistMeasurement(vtk.vtkObject):
     if len(self.divotsToDo) == 0 and len(errors) > 0:
       if self.curLoc:
         self.distStats[self.curLoc] = s
+      # and update overall stats
+      self.allDistErrors = self.allDistErrors + errors
+      self.distStats["ALL"] = self.__stats(self.allDistErrors)
 
   def updateRegStats(self):
     # Compute errors
@@ -248,3 +288,6 @@ class DistMeasurement(vtk.vtkObject):
     if not len(self.divotsToDo) > 0:
       if self.curLoc:
         self.regStats[self.curLoc] = s
+      # and update overall stats
+      self.allRegErrors = self.allRegErrors + errors
+      self.regStats["ALL"] = self.__stats(self.allRegErrors)
