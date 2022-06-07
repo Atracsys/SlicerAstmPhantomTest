@@ -1440,52 +1440,6 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # -------------------------------------------------------------------
   def EndSession(self):
     self.InvokeEvent(self.sessionEndedEvent)
-    logging.info("---------------------Global Stats---------------------")
-
-    def keyToEnd(d,k): # if key k exists in dict d, place it at the end
-      if k in d:
-        tmp = d[k].copy()
-        d.pop(k, None)
-        d[k] = tmp
-
-    if self.singlePointMeasurement:
-      if "ALL" in self.singlePointMeasurement.accuracyStats:
-        keyToEnd(self.singlePointMeasurement.accuracyStats, "ALL") # move "ALL" to end of dictionary
-        logging.info(f'>> Single Point Accuracy ({self.singlePointMeasurement.accuracyStats["ALL"]["num"]}): '
-          f'mean = {self.singlePointMeasurement.accuracyStats["ALL"]["avg err"]:.2f}, '
-          f'max = {self.singlePointMeasurement.accuracyStats["ALL"]["max"]:.2f}')
-      if "ALL" in self.singlePointMeasurement.precisionStats:
-        keyToEnd(self.singlePointMeasurement.precisionStats, "ALL")
-        logging.info(f'>> Single Point Precision ({self.singlePointMeasurement.precisionStats["ALL"]["num"]}): '
-          f'span = {self.singlePointMeasurement.precisionStats["ALL"]["span"]:.2f}, '
-          f'RMS = {self.singlePointMeasurement.precisionStats["ALL"]["rms"]:.2f}')
-
-    for rm in self.rotMeasurements:
-      if "ALL" in rm.stats:
-        keyToEnd(rm.stats, "ALL")
-        logging.info(f'>> {rm.rotAxisName} Rotation Precision ({rm.stats["ALL"]["num"]}): '
-          f'rangeMin = {rm.stats["ALL"]["rangeMin"]:.2f}, '
-          f'rangeMax = {rm.stats["ALL"]["rangeMax"]:.2f}, '
-          f'span = {rm.stats["ALL"]["span"]:.2f}, '
-          f'RMS = {rm.stats["ALL"]["rms"]:.2f}')
-
-    if self.distMeasurement:
-      if "ALL" in self.distMeasurement.distStats:
-        keyToEnd(self.distMeasurement.distStats, "ALL")
-        logging.info(f'>> Distance errors ({self.distMeasurement.distStats["ALL"]["num"]}): '
-          f'mean = {self.distMeasurement.distStats["ALL"]["mean"]:.2f}, '
-          f'min = {self.distMeasurement.distStats["ALL"]["min"]:.2f}, '
-          f'max = {self.distMeasurement.distStats["ALL"]["max"]:.2f}, '
-          f'RMS = {self.distMeasurement.distStats["ALL"]["rms"]:.2f}')
-      if "ALL" in self.distMeasurement.regStats:
-        keyToEnd(self.distMeasurement.regStats, "ALL")
-        logging.info(f'>> Registration errors ({self.distMeasurement.regStats["ALL"]["num"]}): '
-          f'mean = {self.distMeasurement.regStats["ALL"]["mean"]:.2f}, '
-          f'min = {self.distMeasurement.regStats["ALL"]["min"]:.2f}, '
-          f'max = {self.distMeasurement.regStats["ALL"]["max"]:.2f}, '
-          f'RMS = {self.distMeasurement.regStats["ALL"]["rms"]:.2f}')
-
-    logging.info("------------------------------------------------------")
 
     # All data serialization
     dts = self.startTime.strftime("%Y.%m.%d_%H.%M.%S")
@@ -1525,7 +1479,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
     # Generating report in HTML
     # Stack all values
-    locations = ["ALL", "CL", "BL", "TL", "LL", "RL"] # match html order
+    locations = ["CL", "BL", "TL", "LL", "RL"] # match html order
     def lookup(d, k, locs): # look up key k in dict d at locations locs
       lst = []
       for l in locs:
@@ -1623,16 +1577,15 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'For precision, the maximum distance of between two measurements (span) is reported. Also, the deviations are calculated as the distances of all the measurements from their average. Calculated as such, the Root Mean Square (RMS) of the deviations equates their standard deviation and is reported.\n'
       f'<p>\n'
       f'<table style="max-width: 700px;" class="hide">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{sv[0][0]}</td><td>{sv[0][1]}</td><td>{sv[0][2]}</td><td>{sv[0][3]}</td><td>{sv[0][4]}</td><td>{sv[0][5]}</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{sv[0][0]}</td><td>{sv[0][1]}</td><td>{sv[0][2]}</td><td>{sv[0][3]}</td><td>{sv[0][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
-      f'      <td>Mean</td><td><b>{sv[1][0]}</td><td>{sv[1][1]}</td><td>{sv[1][2]}</td><td>{sv[1][3]}</td><td>{sv[1][4]}</td><td>{sv[1][5]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{sv[2][0]}</td><td>{sv[2][1]}</td><td>{sv[2][2]}</td><td>{sv[2][3]}</td><td>{sv[2][4]}</td><td>{sv[2][5]}</td></tr>\n'
+      f'      <td>Mean</td><td><b>{sv[1][0]}</td><td>{sv[1][1]}</td><td>{sv[1][2]}</td><td>{sv[1][3]}</td><td>{sv[1][4]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{sv[2][0]}</td><td>{sv[2][1]}</td><td>{sv[2][2]}</td><td>{sv[2][3]}</td><td>{sv[2][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{sv[3][0]}</td><td>{sv[3][1]}</td><td>{sv[3][2]}</td><td>{sv[3][3]}</td><td>{sv[3][4]}</td><td>{sv[3][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{sv[4][0]}*</td><td>{sv[4][1]}</td><td>{sv[4][2]}</td><td>{sv[4][3]}</td><td>{sv[4][4]}</td><td>{sv[4][5]}</td></tr>\n'
+      f'      <td>Span</td><td><b>{sv[3][0]}</td><td>{sv[3][1]}</td><td>{sv[3][2]}</td><td>{sv[3][3]}</td><td>{sv[3][4]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{sv[4][0]}</td><td>{sv[4][1]}</td><td>{sv[4][2]}</td><td>{sv[4][3]}</td><td>{sv[4][4]}</td></tr>\n'
       f'</table>\n'
-      f'* The RMS for <b>ALL</b> is the RMS of the standard deviations (i.e. the RMS) at each location.<br>\n'
       f'\n'
       f'<h3>Rotation Precision Tests</h3>\n'
       f'The rotation tests measure the precision of single point acquisition under various orientations of the pointer. These orientations consists of <b>successive</b> rotations around the roll, pitch and yaw axes of the pointer.<br>\n'
@@ -1643,44 +1596,41 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'<h4>{self.rotMeasurements[0].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
       f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r0v[0][0]}</td><td>{r0v[0][1]}</td><td>{r0v[0][2]}</td><td>{r0v[0][3]}</td><td>{r0v[0][4]}</td><td>{r0v[0][5]}</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r0v[0][0]}</td><td>{r0v[0][1]}</td><td>{r0v[0][2]}</td><td>{r0v[0][3]}</td><td>{r0v[0][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Angle (°)</td>\n'
-      f'      <td>Min</td><td><b>{r0v[1][0]}</td><td>{r0v[1][1]}</td><td>{r0v[1][2]}</td><td>{r0v[1][3]}</td><td>{r0v[1][4]}</td><td>{r0v[1][5]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{r0v[2][0]}</td><td>{r0v[2][1]}</td><td>{r0v[2][2]}</td><td>{r0v[2][3]}</td><td>{r0v[2][4]}</td><td>{r0v[2][5]}</td></tr>\n'
+      f'      <td>Min</td><td><b>{r0v[1][0]}</td><td>{r0v[1][1]}</td><td>{r0v[1][2]}</td><td>{r0v[1][3]}</td><td>{r0v[1][4]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{r0v[2][0]}</td><td>{r0v[2][1]}</td><td>{r0v[2][2]}</td><td>{r0v[2][3]}</td><td>{r0v[2][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{r0v[3][0]}</td><td>{r0v[3][1]}</td><td>{r0v[3][2]}</td><td>{r0v[3][3]}</td><td>{r0v[3][4]}</td><td>{r0v[3][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{r0v[4][0]}*</td><td>{r0v[4][1]}</td><td>{r0v[4][2]}</td><td>{r0v[4][3]}</td><td>{r0v[4][4]}</td><td>{r0v[4][5]}</td></tr>\n'
+      f'      <td>Span</td><td><b>{r0v[3][0]}</td><td>{r0v[3][1]}</td><td>{r0v[3][2]}</td><td>{r0v[3][3]}</td><td>{r0v[3][4]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{r0v[4][0]}</td><td>{r0v[4][1]}</td><td>{r0v[4][2]}</td><td>{r0v[4][3]}</td><td>{r0v[4][4]}</td></tr>\n'
       f'</table>\n'
-      f'* The RMS for <b>ALL</b> is the RMS of the standard deviations (i.e. the RMS) at each location.<br>\n'
       f'\n'
       f'<h4>{self.rotMeasurements[1].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
       f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r1v[0][0]}</td><td>{r1v[0][1]}</td><td>{r1v[0][2]}</td><td>{r1v[0][3]}</td><td>{r1v[0][4]}</td><td>{r1v[0][5]}</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r1v[0][0]}</td><td>{r1v[0][1]}</td><td>{r1v[0][2]}</td><td>{r1v[0][3]}</td><td>{r1v[0][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Angle (°)</td>\n'
-      f'      <td>Min</td><td><b>{r1v[1][0]}</td><td>{r1v[1][1]}</td><td>{r1v[1][2]}</td><td>{r1v[1][3]}</td><td>{r1v[1][4]}</td><td>{r1v[1][5]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{r1v[2][0]}</td><td>{r1v[2][1]}</td><td>{r1v[2][2]}</td><td>{r1v[2][3]}</td><td>{r1v[2][4]}</td><td>{r1v[2][5]}</td></tr>\n'
+      f'      <td>Min</td><td><b>{r1v[1][0]}</td><td>{r1v[1][1]}</td><td>{r1v[1][2]}</td><td>{r1v[1][3]}</td><td>{r1v[1][4]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{r1v[2][0]}</td><td>{r1v[2][1]}</td><td>{r1v[2][2]}</td><td>{r1v[2][3]}</td><td>{r1v[2][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{r1v[3][0]}</td><td>{r1v[3][1]}</td><td>{r1v[3][2]}</td><td>{r1v[3][3]}</td><td>{r1v[3][4]}</td><td>{r1v[3][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{r1v[4][0]}*</td><td>{r1v[4][1]}</td><td>{r1v[4][2]}</td><td>{r1v[4][3]}</td><td>{r1v[4][4]}</td><td>{r1v[4][5]}</td></tr>\n'
+      f'      <td>Span</td><td><b>{r1v[3][0]}</td><td>{r1v[3][1]}</td><td>{r1v[3][2]}</td><td>{r1v[3][3]}</td><td>{r1v[3][4]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{r1v[4][0]}</td><td>{r1v[4][1]}</td><td>{r1v[4][2]}</td><td>{r1v[4][3]}</td><td>{r1v[4][4]}</td></tr>\n'
       f'</table>\n'
-      f'* The RMS for <b>ALL</b> is the RMS of the standard deviations (i.e. the RMS) at each location.<br>\n'
       f'\n'
       f'<h4>{self.rotMeasurements[2].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
       f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r2v[0][0]}</td><td>{r2v[0][1]}</td><td>{r2v[0][2]}</td><td>{r2v[0][3]}</td><td>{r2v[0][4]}</td><td>{r2v[0][5]}</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r2v[0][0]}</td><td>{r2v[0][1]}</td><td>{r2v[0][2]}</td><td>{r2v[0][3]}</td><td>{r2v[0][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Angle (°)</td>\n'
-      f'      <td>Min</td><td><b>{r2v[1][0]}</td><td>{r2v[1][1]}</td><td>{r2v[1][2]}</td><td>{r2v[1][3]}</td><td>{r2v[1][4]}</td><td>{r2v[1][5]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{r2v[2][0]}</td><td>{r2v[2][1]}</td><td>{r2v[2][2]}</td><td>{r2v[2][3]}</td><td>{r2v[2][4]}</td><td>{r2v[2][5]}</td></tr>\n'
+      f'      <td>Min</td><td><b>{r2v[1][0]}</td><td>{r2v[1][1]}</td><td>{r2v[1][2]}</td><td>{r2v[1][3]}</td><td>{r2v[1][4]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{r2v[2][0]}</td><td>{r2v[2][1]}</td><td>{r2v[2][2]}</td><td>{r2v[2][3]}</td><td>{r2v[2][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{r2v[3][0]}</td><td>{r2v[3][1]}</td><td>{r2v[3][2]}</td><td>{r2v[3][3]}</td><td>{r2v[3][4]}</td><td>{r2v[3][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{r2v[4][0]}*</td><td>{r2v[4][1]}</td><td>{r2v[4][2]}</td><td>{r2v[4][3]}</td><td>{r2v[4][4]}</td><td>{r2v[4][5]}</td></tr>\n'
+      f'      <td>Span</td><td><b>{r2v[3][0]}</td><td>{r2v[3][1]}</td><td>{r2v[3][2]}</td><td>{r2v[3][3]}</td><td>{r2v[3][4]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{r2v[4][0]}</td><td>{r2v[4][1]}</td><td>{r2v[4][2]}</td><td>{r2v[4][3]}</td><td>{r2v[4][4]}</td></tr>\n'
       f'</table>\n'
-      f'* The RMS for <b>ALL</b> is the RMS of the standard deviations (i.e. the RMS) at each location.<br>\n'
       f'\n'
       f'<h3>Multi-point Accuracy Test</h3>\n'
       f'This test measures the spatial relationship between various acquired points and compare it to the reference values. This can be done in two ways: distances or point cloud registration.<br>\n'
@@ -1688,19 +1638,19 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'The registration is performed between the point clouds from the measurements and from the reference. The mean, minimum, maximum, RMS of the registration residuals are reported below.\n'
       f'<p>\n'
       f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td><b>ALL</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{mv[0][0]}</td><td>{mv[0][1]}</td><td>{mv[0][2]}</td><td>{mv[0][3]}</td><td>{mv[0][4]}</td><td>{mv[0][5]}</td></tr>\n'
+      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{mv[0][0]}</td><td>{mv[0][1]}</td><td>{mv[0][2]}</td><td>{mv[0][3]}</td><td>{mv[0][4]}</td></tr>\n'
       f'  <tr><td rowspan="5">Distances (mm)</td>\n'
-      f'      <td>Num.</td><td><b>{mv[1][0]}</td><td>{mv[1][1]}</td><td>{mv[1][2]}</td><td>{mv[1][3]}</td><td>{mv[1][4]}</td><td>{mv[1][5]}</td></tr>\n'
-      f'  <tr><td>Mean</td><td><b>{mv[2][0]}</td><td>{mv[2][1]}</td><td>{mv[2][2]}</td><td>{mv[2][3]}</td><td>{mv[2][4]}</td><td>{mv[2][5]}</td></tr>\n'
-      f'  <tr><td>Min</td><td><b>{mv[3][0]}</td><td>{mv[3][1]}</td><td>{mv[3][2]}</td><td>{mv[3][3]}</td><td>{mv[3][4]}</td><td>{mv[3][5]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{mv[4][0]}</td><td>{mv[4][1]}</td><td>{mv[4][2]}</td><td>{mv[4][3]}</td><td>{mv[4][4]}</td><td>{mv[4][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{mv[5][0]}</td><td>{mv[5][1]}</td><td>{mv[5][2]}</td><td>{mv[5][3]}</td><td>{mv[5][4]}</td><td>{mv[5][5]}</td></tr>\n'
+      f'      <td>Num.</td><td><b>{mv[1][0]}</td><td>{mv[1][1]}</td><td>{mv[1][2]}</td><td>{mv[1][3]}</td><td>{mv[1][4]}</td></tr>\n'
+      f'  <tr><td>Mean</td><td><b>{mv[2][0]}</td><td>{mv[2][1]}</td><td>{mv[2][2]}</td><td>{mv[2][3]}</td><td>{mv[2][4]}</td></tr>\n'
+      f'  <tr><td>Min</td><td><b>{mv[3][0]}</td><td>{mv[3][1]}</td><td>{mv[3][2]}</td><td>{mv[3][3]}</td><td>{mv[3][4]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{mv[4][0]}</td><td>{mv[4][1]}</td><td>{mv[4][2]}</td><td>{mv[4][3]}</td><td>{mv[4][4]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{mv[5][0]}</td><td>{mv[5][1]}</td><td>{mv[5][2]}</td><td>{mv[5][3]}</td><td>{mv[5][4]}</td></tr>\n'
       f'  <tr><td rowspan="4">Registration (mm)</td>\n'
-      f'      <td>Mean</td><td><b>{mv[6][0]}</td><td>{mv[6][1]}</td><td>{mv[6][2]}</td><td>{mv[6][3]}</td><td>{mv[6][4]}</td><td>{mv[6][5]}</td></tr>\n'
-      f'  <tr><td>Min</td><td><b>{mv[7][0]}</td><td>{mv[7][1]}</td><td>{mv[7][2]}</td><td>{mv[7][3]}</td><td>{mv[7][4]}</td><td>{mv[7][5]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{mv[8][0]}</td><td>{mv[8][1]}</td><td>{mv[8][2]}</td><td>{mv[8][3]}</td><td>{mv[8][4]}</td><td>{mv[8][5]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{mv[9][0]}</td><td>{mv[9][1]}</td><td>{mv[9][2]}</td><td>{mv[9][3]}</td><td>{mv[9][4]}</td><td>{mv[9][5]}</td></tr>\n'
+      f'      <td>Mean</td><td><b>{mv[6][0]}</td><td>{mv[6][1]}</td><td>{mv[6][2]}</td><td>{mv[6][3]}</td><td>{mv[6][4]}</td></tr>\n'
+      f'  <tr><td>Min</td><td><b>{mv[7][0]}</td><td>{mv[7][1]}</td><td>{mv[7][2]}</td><td>{mv[7][3]}</td><td>{mv[7][4]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{mv[8][0]}</td><td>{mv[8][1]}</td><td>{mv[8][2]}</td><td>{mv[8][3]}</td><td>{mv[8][4]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{mv[9][0]}</td><td>{mv[9][1]}</td><td>{mv[9][2]}</td><td>{mv[9][3]}</td><td>{mv[9][4]}</td></tr>\n'
       f'</table>\n'
       f'</div>\n'
       f'</body>\n'
