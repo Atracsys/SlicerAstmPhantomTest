@@ -348,13 +348,33 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.pointAcquiNumFramesLineEdit.enabled = False
     self.ui.pointAcquiFramesLabel.enabled = False
 
+    self.calibratingText = vtk.vtkCornerAnnotation()
+    self.calibratingText.GetTextProperty().SetFontSize(200)
+    self.calibratingText.SetText(2, "Phantom registration:\nPick the target divot with the pointer")
+    self.logic.mainRenderer.AddActor(self.calibratingText)
+
   @vtk.calldata_type(vtk.VTK_STRING)
   def onPhantomCalibrated(self, caller, event = None, calldata = None):
     """
     Called when the phantom is calibrated
     """
+    self.logic.mainRenderer.RemoveActor(self.calibratingText)
+    # Enable locations checkboxes
+    self.ui.locCheckBoxCL.enabled = self.ui.locCheckBoxCL.checked
+    self.ui.locCheckBoxBL.enabled = self.ui.locCheckBoxBL.checked
+    self.ui.locCheckBoxTL.enabled = self.ui.locCheckBoxTL.checked
+    self.ui.locCheckBoxLL.enabled = self.ui.locCheckBoxLL.checked
+    self.ui.locCheckBoxRL.enabled = self.ui.locCheckBoxRL.checked
+    # Enable test checkboxes
+    self.ui.testCheckBox1.enabled = True
+    self.ui.testCheckBox2.enabled = True
+    self.ui.testCheckBox3.enabled = True
+    self.ui.testCheckBox4.enabled = True
+    self.ui.testCheckBox5.enabled = True
+    # Disable some parameters in UI
     self.ui.hackCalibButton.enabled = False
     self.ui.operatorLineEdit.enabled = False
+    # Update moving tolerance
     self.onMovingTolChangedFromLocation(self.logic.phantom)
 
   @vtk.calldata_type(vtk.VTK_STRING)
@@ -470,6 +490,14 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.hackTLButton.enabled = False
     self.ui.hackLLButton.enabled = False
     self.ui.hackRLButton.enabled = False
+    # Display message for session end
+    self.endText = vtk.vtkCornerAnnotation()
+    self.endText.GetTextProperty().SetFontSize(200)
+    self.endText.SetLinearFontScaleFactor(8)
+    self.endText.GetTextProperty().SetColor(0,1,0)
+    self.endText.GetTextProperty().BoldOn()
+    self.endText.SetText(2, "Session done !")
+    self.logic.topWVRenderer.AddActor(self.endText)
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onTestNamesUpdated(self, caller, event, calldata):
@@ -558,21 +586,6 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   def onOperatorIdChanged(self):
     opId = self.ui.operatorLineEdit.text
     if opId != "" and opId != self.logic.operatorId: # not empty and not the same
-      if not self.logic.operatorId: # if the first time
-        # Enable locations checkboxes
-        self.ui.locCheckBoxCL.enabled = self.ui.locCheckBoxCL.checked
-        self.ui.locCheckBoxBL.enabled = self.ui.locCheckBoxBL.checked
-        self.ui.locCheckBoxTL.enabled = self.ui.locCheckBoxTL.checked
-        self.ui.locCheckBoxLL.enabled = self.ui.locCheckBoxLL.checked
-        self.ui.locCheckBoxRL.enabled = self.ui.locCheckBoxRL.checked
-
-        # Enable test checkboxes
-        self.ui.testCheckBox1.enabled = True
-        self.ui.testCheckBox2.enabled = True
-        self.ui.testCheckBox3.enabled = True
-        self.ui.testCheckBox4.enabled = True
-        self.ui.testCheckBox5.enabled = True
-
       self.logic.operatorId = opId
       # Checking for dev
       pw = '8ee930e3474f1b9a4a0d7524f3527b93f1ff2e4fa89a385f1ede01a15d7cc9e4'
