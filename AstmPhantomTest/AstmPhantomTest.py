@@ -31,7 +31,7 @@ class AstmPhantomTest(ScriptedLoadableModule):
     self.parent.helpText = """
 This module is a tool to perform the tracking accuracy tests as described in the ASTM standard F2554-22.
 It provides visual guidance, navigation and all the statistical analysis.
-For more information about the module and its usage, please refer to the <a href="https://github.com/Atracsys/astm-phantom-test">home page</a>.
+For more information about the module and its usage, please refer to the <a href="https://github.com/Atracsys/SlicerAstmPhantomTest">home page</a>.
 """
     self.parent.acknowledgementText = """
 This module has been developed by Sylvain Bernhardt, Atracsys LLC. It is based on a scripted module
