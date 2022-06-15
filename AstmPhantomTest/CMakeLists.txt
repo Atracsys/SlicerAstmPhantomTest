@@ -6,10 +6,21 @@ set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
   )
 
-file(GLOB_RECURSE RESOURCES_FILES "Resources/*")
-file(GLOB_RECURSE PYTHON_CLASSES "AstmPhantomTestClasses/*")
+file(GLOB RESOURCES_FILES
+  "Resources/gt/*.txt"
+  "Resources/models/*.stl"
+  "Resources/ptr/*.txt"
+  "Resources/sounds/*.wav"
+  "Resources/wv/*.txt"
+  "Resources/*.txt"
+  )
+file(GLOB PYTHON_CLASSES
+  "AstmPhantomTestClasses/*.py"
+  )
 
 set(MODULE_PYTHON_RESOURCES
+  Resources/Icons/${MODULE_NAME}.png
+  Resources/UI/${MODULE_NAME}.ui
   ${RESOURCES_FILES}
   ${PYTHON_CLASSES}
   )
