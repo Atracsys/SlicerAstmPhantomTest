@@ -6,9 +6,12 @@ set(MODULE_PYTHON_SCRIPTS
   ${MODULE_NAME}.py
   )
 
+file(GLOB_RECURSE RESOURCES_FILES "Resources/*")
+file(GLOB_RECURSE PYTHON_CLASSES "AstmPhantomTestClasses/*")
+
 set(MODULE_PYTHON_RESOURCES
-  Resources/Icons/${MODULE_NAME}.png
-  Resources/UI/${MODULE_NAME}.ui
+  ${RESOURCES_FILES}
+  ${PYTHON_CLASSES}
   )
 
 #-----------------------------------------------------------------------------
