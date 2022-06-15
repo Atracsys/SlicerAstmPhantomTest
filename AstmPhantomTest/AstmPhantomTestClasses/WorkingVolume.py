@@ -233,18 +233,19 @@ class WorkingVolume(vtk.vtkObject):
     self.id = os.path.basename(path).split('.txt')[0] # retrieve filename only
     return True
 
-  # returns pointer moving tolerance depending on current phantom position
-  def movingToleranceFromPos(self, pos):
-    if (pos[2] < self.movingTolMin["depth"] or pos[2] > self.movingTolMax["depth"]):
-      logging.info("========= /!\\ Depth outside working volume: setting largest moving tolerance for pointer /!\\ =========")
-      return self.movingTolMax["tol"] # largest tolerance to be safe
-    elif (abs(self.movingTolMax["depth"] - self.movingTolMin["depth"]) < 0.001):
+  # returns pointer moving tolerance depending on current phantom depth i.e. the distance to the tracker
+  def movingToleranceFromDepth(self, depth):
+    if (abs(self.movingTolMax["depth"] - self.movingTolMin["depth"]) < 0.001):
       logging.info("========= /!\\ Working volume too narrow in depth: setting smallest moving tolerance for pointer /!\\ =========")
       return self.movingTolMin["tol"] # smallest tolerance since nearly no difference in depth
-    else: # tol = a*depth^2+b as tolerance is a function of depth squared
+    else:
+      # clip depth between min and max
+      depth = max(depth, self.movingTolMin["depth"])
+      depth = min(depth, self.movingTolMax["depth"])
+      # tol = a*depth^2+b as tolerance is a function of depth squared
       a = (self.movingTolMax["tol"] - self.movingTolMin["tol"])/(self.movingTolMax["depth"]**2 - self.movingTolMin["depth"]**2)
       b = self.movingTolMax["tol"] - a * self.movingTolMax["depth"]**2
-      return a * pos[2]**2 + b
+      return a * depth**2 + b
 
   # returns the position of the simp phantom from its transform matrix
   def simpPhantPos(self):

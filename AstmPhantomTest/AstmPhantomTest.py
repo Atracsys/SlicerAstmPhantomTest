@@ -1174,7 +1174,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.workingVolume.RemoveObserver(self.wvgObs1)
     self.wvTargetsTop.proxiDetect = False
     self.wvTargetsTop.RemoveObserver(self.wvgObs2)
-    self.pointer.setMovingTolerance(self.workingVolume.movingToleranceFromPos(cd[1:4]))
+    self.pointer.setMovingTolerance(self.workingVolume.movingToleranceFromDepth(np.linalg.norm(cd[1:4])))
     # Initialize tests todo list
     self.testsToDo = []
     for t in self.tests:
