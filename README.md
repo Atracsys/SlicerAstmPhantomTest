@@ -33,65 +33,16 @@ To perform the test, the following items are necessary:
 [PLUS Toolkit](https://plustoolkit.github.io/) is a free, open-source set of software tools for Computer-Assisted Surgery, which includes a wrapper for SDK's from many manufacturers of tracking systems. This enables a standardization of the tracking data streaming from the tracker to the computer, thanks to an [OpenIGTLink](http://openigtlink.org) server (i.e. the **Plus Server**).
 
 ### Installation<a name="plusDownload"></a>
-Pre-built installers for more than twenty systems are available for Windows from the [Download page](https://plustoolkit.github.io/download.html). To know which installer to choose, the user may refer to the table at the bottom of that page. For Atracsys trackers, the version must 2.9.0.202205x or more recent. Since the 2.9 release is not stable yet, one can access it from the **Latest Development Snapshot**. For other trackers, the current **Latest stable release** (version 2.8) is enough.
+Pre-built installers for more than twenty systems are available for Windows from the [Download page](https://plustoolkit.github.io/download.html). To know which installer to choose, the user may refer to the table at the bottom of that page. The version must be 2.9.0.202207x or more recent. Since the 2.9 release is not stable yet, one can access it from the **Latest Development Snapshot**.
 
 :warning: Beside the wrappers, PLUS Toolkit also includes the SDK for most systems. For Atracsys trackers though, the SDK needs to be installed separately on the computer. Also, the Atracsys SDK version is required to be 4.5.2 or more recent.
 
 To install on Linux or Mac OS, please refer to the [Developer's guide](https://plustoolkit.github.io/developersguide).
 
 ### Configuration file<a name="configFile"></a>
-The **Plus Server** relies on a configuration file, in XML format, to set the tracking parameters. There are several configuration files already included with PLUS Toolkit (in `/config` for installed versions, in `/PlusLibData/ConfigFiles` for built versions). The structure of a configuration file is also detailed in the [Configuration page](http://perk-software.cs.queensu.ca/plus/doc/nightly/user/Configuration.html) in the User Manual.
+The **Plus Server** relies on a configuration file, in XML format, to set the tracking parameters. These configuration files are located in `/config` for pre-built versions and in `/PlusLibData/ConfigFiles` for compiled versions. Plus Toolkit already comes with two examples of configuration file for the ASTM Phantom Test: one for Atracsys trackers (`PlusDeviceSet_Server_AstmPhantomTest_Atracsys.xml`) and one for NDI Polaris trackers (`PlusDeviceSet_Server_AstmPhantomTest_NDI_Polaris.xml`). The user is welcome to duplicate and customize these configuration files to meet their needs, but some parameters, listed below, must be correctly set in order to successfully run the ASTM Phantom Test.
 
-The ASTM Phantom Test requires certain server parameters to be set, as described in the configuration file example below.
-
-```xml
-<PlusConfiguration version="2.7">
- <DataCollection StartupDelaySec="1.0">
-  <DeviceSet
-   Name="PlusServer: ASTM Phantom Test"
-   Description="Broadcasting through OpenIGTLink the tracking data from a pointer with respect to a phantom."/>
-  <Device
-   Id="TrackerDevice"
-   Type="___Some___Tracker___"
-   MaxMissingFiducials="0"
-   MaxMeanRegistrationErrorMm="1.0"
-   ToolReferenceFrame="Tracker" >
-   <DataSources>
-    <DataSource Type="Tool" Id="Phantom" TrackingType="PASSIVE"
-                GeometryFile="geometries/___Some___Geometry___1" />
-    <DataSource Type="Tool" Id="Pointer" TrackingType="PASSIVE"
-                GeometryFile="geometries/___Some___Geometry___2" />
-   </DataSources>
-   <OutputChannels>
-    <OutputChannel Id="TrackerStream">
-     <DataSource Type="Tool" Id="Phantom" />
-     <DataSource Type="Tool" Id="Pointer" />
-    </OutputChannel>
-   </OutputChannels>
-  </Device>
- </DataCollection>
-
- <PlusOpenIGTLinkServer
-  MaxNumberOfIgtlMessagesToSend="1"
-  MaxTimeSpentWithProcessingMs="50"
-  ListeningPort="18944"
-  SendValidTransformsOnly="FALSE"
-  OutputChannelId="TrackerStream" >
-  <DefaultClientInfo>
-   <MessageTypes>
-    <Message Type="TRANSFORM" />
-   </MessageTypes>
-   <TransformNames>
-    <Transform Name="PointerToPhantom" />
-    <Transform Name="PhantomToTracker" />
-    <Transform Name="PointerToTracker" />
-   </TransformNames>
-  </DefaultClientInfo>
- </PlusOpenIGTLinkServer>  
-</PlusConfiguration>
-```
-
-* `Device > Type` describes what tracker is used and must be in accordance with the version of PLUS Toolkit installed. For more information on what type to use, please refer to the [Configuration page](http://perk-software.cs.queensu.ca/plus/doc/nightly/user/Configuration.html). 
+* `Device > Type` describes what tracker is used and must be in accordance with the version of PLUS Toolkit installed. For more information on what type to use, please refer to the [Configuration page](http://perk-software.cs.queensu.ca/plus/doc/nightly/user/Configuration.html).
 
 * The `Device > ToolReferenceFrame` gives a name to the reference frame of the tracking coordinates, typically the tracker.
 
@@ -138,41 +89,37 @@ The ASTM Phantom Test requires certain server parameters to be set, as described
 
 * Other device-specific parameters can be set, depending on the manufacturer and/or the tracker. For example, the origin of the tracker coordinate system is supposed to be at the center of the device. For Atracsys trackers, the device parameter `SymmetriseCoordinates="1"` is then required to move the origin of the tracker from the left camera to the center.
 
+For a better understanding of configuration files, their structure is detailed in the [Configuration page](http://perk-software.cs.queensu.ca/plus/doc/nightly/user/Configuration.html) of the User Manual.
+
 ## 3D Slicer<a name="slicerInstall"></a>
 [3D Slicer](https://www.slicer.org) (or "Slicer" for short) is a free, open-source software dedicated to medical image analysis. One of strengths of Slicer is its modularity, as it is possible to develop extensions to further expand its features or use its platform to create a dedicated software. The latter is the approach chosen for this project. Our Slicer module sets up an **OpenIGTLink client**, connects to the **Plus Server** and receives and analyzes the tracking data to perform the ASTM Phantom Test.
 
 ### Installation
-From Slicer's [download page](https://download.slicer.org), download and install the latest stable release corresponding to the computer OS.
-Moreover, since our module requires Slicer to run an OpenIGTLink client, the extension **SlicerOpenIGTLink** also needs to be installed. To do so, start Slicer and head to the Extensions Manager and install the extension as shown below.
+From Slicer's [download page](https://download.slicer.org), download, install and run the latest stable release corresponding to the computer OS. Then, click on `Install Slicer Extensions` from the welcome panel.
 
-![Extension Manager Button](/readme_img/ext_manager_button.svg)
+![Launch extensions manager](/readme_img/install1.svg)
 
-![Extension Manager](/readme_img/extension_manager.svg)
+In the Extensions Manager, head to the `Install Extensions` tab (1) and browse or look for the `AstmPhantomTest` extension (2). Once found, simply click on Install (3) and restart Slicer as required (4).
 
-### Adding the module
-Now that Slicer is all set up, the ASTM Phantom Test module can be added. First, clone or download the present repository to have the `AstmPhantomTest` folder locally on the computer. Then, head to the `Applications Settings` via the menu.
-
-![Application Settings](/readme_img/application_settings.svg)
-
-In `Modules`, select the `AstmPhantomTest` folder to be added as an `Additional Module Path`. This will require a restart of Slicer to take effect.
-
-![Module import](/readme_img/module_import.svg)
+![Module install](/readme_img/install2.svg)
 
 The ASTM Phantom Test module is now installed and a shortcut for it can be set in the main menu bar by returning to `Application Settings` > `Modules`.<a name="moduleShortcut"></a>
 
 ![Module shortcut](/readme_img/module_shortcut.svg)
 
 # Parameter files<a name="paramFiles"></a>
-The module relies on several parameter files to accomodate for the hardware used.
+The module relies on several parameter files to accomodate for the used hardware. Those parameter files may be duplicated and customized to accomodate for specific tools or requirements. The parameter files are located in the module folder, whose path (hereafter coined `module_path`) can be found via `Application Settings > Modules`.
+
+![Module path](/readme_img/module_path.svg)
 
 ## Pointer file<a name="pointerFile"></a>
-Located in `AstmPhantomTest\Resources\ptr`, this parameter file contains the maximum tilt angle (`MAXTILT`, in degrees) beyond which the pointer manufacturer does not guarantee tracking.
+Located in `module_path\Resources\ptr`, this parameter file contains the maximum tilt angle (`MAXTILT`, in degrees) beyond which the pointer manufacturer does not guarantee tracking.
 This value typically depends on the type of tracking technology and that of the fiducials/markers attached to the pointer.
 <a name="ptrRotAxes"></a>The parameter file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the pointer**. :warning: These axes need to match those set for the [working volume](#wvRotAxes) (more details in the [Troubleshooting section](#tbWrongOrientation)). 
 Finally, the file contains the pointer height (`HEIGHT`, in mm) to accomodate for pointer tracking while the phantom nears the top of the working volume. This consists in placing the top target location for the phantom ([`TL`](#wvFile)) with a downward offset of `HEIGHT` + the elevation of the highest divot (e.g, #47) from the central divot ([`CTR`](#phantomFile)). If `HEIGHT` is set to 0, then there is no compensation.
 
 ## Working volume file<a name="wvFile"></a>
-Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various information:
+Located in `module_path\Resources\wv`, this parameter file contains various information:
 - the coordinates of the various locations that the phantom should be placed at in the working volume. Beside the center location (`CL`), all other locations lie at the edges of the working volume, as described in the ASTM standard. The four other locations are placed on the outer boundaries of the back plane. `BL` is located at the bottom, `TL` at the top, `LL` at the left and `RL` at the right. All these coordinates are expressed in the referential of the tracker.
 
 ![Locations](/readme_img/wv_locations_light.svg#gh-light-mode-only)
@@ -187,10 +134,10 @@ Located in `AstmPhantomTest\Resources\wv`, this parameter file contains various 
 
 - <a name="wvRotAxes"></a>the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**.  :warning: These axes need to match those set for the [pointer](#ptrRotAxes) (more details in the [Troubleshooting section](#tbWrongOrientation)).
 
-- the model name of the tracker (`MODEL`) is also given in the working volume file. The name has to match one of the models included in `AstmPhantomTest\Resources\models`. For example, `MODEL = ftk500` will prompt the software to load the 3D model `ftk500_RAS.stl`.
+- the model name of the tracker (`MODEL`) is also given in the working volume file. The name has to match one of the models included in `module_path\Resources\models`. For example, `MODEL = ftk500` will prompt the software to load the 3D model `ftk500_RAS.stl`.
 
 ## Phantom file<a name="phantomFile"></a>
-Located in `AstmPhantomTest\Resources\gt`, this parameter file describes the divots on the phantom and their use. All the divots coordinates are listed (`POINT id`,`X`,`Y`,`Z`) and given **in the referential frame of the phantom**. This referential frame is defined by three divots which ids are given by `REF` in the following order O, X and Y.
+Located in `module_path\Resources\gt`, this parameter file describes the divots on the phantom and their use. All the divots coordinates are listed (`POINT id`,`X`,`Y`,`Z`) and given **in the referential frame of the phantom**. This referential frame is defined by three divots which ids are given by `REF` in the following order O, X and Y.
 
 The sequence of divots used for the multi-point test is given by `SEQ` and the id of the central divot (used for all the other tests) is given by `CTR`.
 
