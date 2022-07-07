@@ -146,7 +146,7 @@ class WorkingVolume(vtk.vtkObject):
     if 'TL' in self.locs and 'CL' in self.locs:
       # magnitude of the depth of the working volume, used to place the cameras
       # far enough before the reset to fill the scene
-      mag = abs(self.locs['TL'][2])
+      mag = np.linalg.norm(self.locs['TL'])
       # Top view of the working volume
       self.renTop.GetActiveCamera().SetPosition((self.locs['CL'] + 2*mag*self.yawAxis).tolist())
       self.renTop.GetActiveCamera().SetViewUp((-self.rollAxis).tolist())
