@@ -33,7 +33,7 @@ To perform the test, the following items are necessary:
 [PLUS Toolkit](https://plustoolkit.github.io/) is a free, open-source set of software tools for Computer-Assisted Surgery, which includes a wrapper for SDK's from many manufacturers of tracking systems. This enables a standardization of the tracking data streaming from the tracker to the computer, thanks to an [OpenIGTLink](http://openigtlink.org) server (i.e. the **Plus Server**).
 
 ### Installation<a name="plusDownload"></a>
-Pre-built installers for more than twenty systems are available for Windows from the [Download page](https://plustoolkit.github.io/download.html). To know which installer to choose, the user may refer to the table at the bottom of that page. The version must be 2.9.0.202207x or more recent. Since the 2.9 release is not stable yet, one can access it from the **Latest Development Snapshot**.
+Pre-built installers for more than twenty systems are available for Windows from the [Download page](https://plustoolkit.github.io/download.html). To know which installer to choose, the user may refer to the table at the bottom of that page. The version must be 2.9.0.202207x or more recent. Since the 2.9 release is not stable yet, one can access it from the [Latest Development Snapshot](http://perk-software.cs.queensu.ca/plus/packages/nightly).
 
 :warning: Beside the wrappers, PLUS Toolkit also includes the SDK for most systems. For Atracsys trackers though, the SDK needs to be installed separately on the computer. Also, the Atracsys SDK version is required to be 4.5.2 or more recent.
 
@@ -70,12 +70,8 @@ The **Plus Server** relies on a configuration file, in XML format, to set the tr
   x=70.131
   y=11.9294
   z=5.21875
-  [pivot]
-  x=0.0000
-  y=0.0000
-  z=0.0000
   ```
-  However, each manufacturer has its own format for such geometry files, so please refer to the tracker's manual for more information.
+  However, each manufacturer has its own format for geometry files (e.g. NDI uses binary ROM files), so please refer to the tracker's manual for more information.
 
 * The `OutputChannel` will be composed of the two streams of our `DataSources` so `Phantom` and `Pointer`
 
@@ -89,13 +85,13 @@ The **Plus Server** relies on a configuration file, in XML format, to set the tr
 
 * Other device-specific parameters can be set, depending on the manufacturer and/or the tracker. For example, the origin of the tracker coordinate system is supposed to be at the center of the device. For Atracsys trackers, the device parameter `SymmetriseCoordinates="1"` is then required to move the origin of the tracker from the left camera to the center.
 
-For a better understanding of configuration files, their structure is detailed in the [Configuration page](http://perk-software.cs.queensu.ca/plus/doc/nightly/user/Configuration.html) of the User Manual.
+For a better understanding of Plus configuration files, their structure is detailed in the [Configuration page](http://perk-software.cs.queensu.ca/plus/doc/nightly/user/Configuration.html) of the User Manual.
 
 ## 3D Slicer<a name="slicerInstall"></a>
 [3D Slicer](https://www.slicer.org) (or "Slicer" for short) is a free, open-source software dedicated to medical image analysis. One of strengths of Slicer is its modularity, as it is possible to develop extensions to further expand its features or use its platform to create a dedicated software. The latter is the approach chosen for this project. Our Slicer module sets up an **OpenIGTLink client**, connects to the **Plus Server** and receives and analyzes the tracking data to perform the ASTM Phantom Test.
 
 ### Installation
-From Slicer's [download page](https://download.slicer.org), download, install and run the latest stable release corresponding to the computer OS. Then, click on `Install Slicer Extensions` from the welcome panel.
+From Slicer's [download page](https://download.slicer.org), download and install the latest stable release corresponding to the computer OS (5.0.3 or above). Then, run Slicer and click on `Install Slicer Extensions` from the welcome panel.
 
 ![Launch extensions manager](/readme_img/install1.svg)
 
@@ -294,7 +290,7 @@ Once all the enabled tests for all the enabled locations are done, the program g
    - See the recommendation for [artificially ending the rotation measurements](#artifOutOfTracking) prematurly.
    
 5. <a name="tbWrongOrientation"></a>*The pointer is misoriented in the rendering and/or the angle values are not near 0 when "facing" the tracker.*
-   - There is a mismatch between the rotation axes in the tracker's coordinate system (in the [working volume file](#wvRotAxes)) and the rotation axes in the pointer's coordinate system (in the [pointer file](#ptrRotAxes)). Those axes should be the same in the world's coordinate system. These axes are important as they allow for 1) a correct interpretation of the pointer rotations with respect to the tracker and 2) a correct orientation of the 3D pointer model in the display.
+   - There is a mismatch between the rotation axes in the tracker's coordinate system (in the [working volume file](#wvRotAxes)) and the rotation axes in the pointer's coordinate system (in the [pointer file](#ptrRotAxes)). Those axes should be the same in the world's coordinate system and they are important as they allow for 1) a correct interpretation of the pointer rotations with respect to the tracker and 2) a correct orientation of the 3D pointer model in the display.
 
 ![RotationAxes](/readme_img/rotation_axes_light.svg#gh-light-mode-only)
 ![RotationAxes](/readme_img/rotation_axes_dark.svg#gh-dark-mode-only)
