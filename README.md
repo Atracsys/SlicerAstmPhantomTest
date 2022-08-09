@@ -103,6 +103,17 @@ The ASTM Phantom Test module is now installed and a shortcut for it can be set i
 
 ![Module shortcut](/readme_img/module_shortcut.svg)
 
+### Keeping the module up-to-date
+It is important to keep the module up-to-date in order to benefit from future improvements and bug fixes. Thus, it is recommended to set Slicer to automatically check (and even install) module updates for you. To do this, head back to the Extensions Manager, click on the wrench icon (1) and check the desired options (2).
+
+![Automatic update](/readme_img/update1.svg)
+
+If you want to manage the updates yourself, you can also manually check and install the update from the Manage Extensions tab (1), click on `Check for updates` (2) and if an update is available, it will show up along with an `Update` button (3).
+
+![Manual update](/readme_img/update2.svg)
+
+:warning: Updating the module will require to restart Slicer to take effect.
+
 # Parameter files<a name="paramFiles"></a>
 The module relies on several parameter files to accomodate for the used hardware. Those parameter files may be duplicated and customized to accomodate for specific tools or requirements. The parameter files are located in the module folder, whose path (hereafter coined `module_path`) can be found via `Application Settings > Modules`.
 
@@ -111,7 +122,7 @@ The module relies on several parameter files to accomodate for the used hardware
 ## Pointer file<a name="pointerFile"></a>
 Located in `module_path\Resources\ptr`, this parameter file contains the maximum tilt angle (`MAXTILT`, in degrees) beyond which the pointer manufacturer does not guarantee tracking.
 This value typically depends on the type of tracking technology and that of the fiducials/markers attached to the pointer.
-<a name="ptrRotAxes"></a>The parameter file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the pointer**. :warning: These axes need to match those set for the [working volume](#wvRotAxes) (more details in the [Troubleshooting section](#tbWrongOrientation)). 
+<a name="ptrRotAxes"></a>The parameter file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the pointer**. :warning: These axes need to match those set for the [working volume](#wvRotAxes) (see example in the [Troubleshooting section](#tbWrongOrientation)).
 Finally, the file contains the pointer height (`HEIGHT`, in mm) to accomodate for pointer tracking while the phantom nears the top of the working volume. This consists in placing the top target location for the phantom ([`TL`](#wvFile)) with a downward offset of `HEIGHT` + the elevation of the highest divot (e.g, #47) from the central divot ([`CTR`](#phantomFile)). If `HEIGHT` is set to 0, then there is no compensation.
 
 ## Working volume file<a name="wvFile"></a>
@@ -128,7 +139,7 @@ Located in `module_path\Resources\wv`, this parameter file contains various info
 
 - the moving tolerance<a name="movTol"></a> is the threshold that separates actual pointer motion from the slight "wiggle" that typically occurs with most tracking technologies even when the pointer tip is static. Since the magnitude of this wiggle often depends on the distance to the tracker, the range for the moving tolerance is given by two extreme values. `MOVTOLMIN` sets the minimum threshold when the pointer is the closest possible to the tracker (e.g, 0.4mm at 920mm in depth) and `MOVTOLMAX` the maximum when the pointer is the farthest possible (e.g, 1.0mm at 2850mm in depth). The **moving tolerance is automatically set by the module** during the tests within the provided range. Nonetheless, if the user experiences trouble acquiring a divot because the program keeps detecting tip motion when there is none, the moving tolerance can be manually increased live (see [troubleshoot](#tbRemainingStatic)).
 
-- <a name="wvRotAxes"></a>the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**.  :warning: These axes need to match those set for the [pointer](#ptrRotAxes) (more details in the [Troubleshooting section](#tbWrongOrientation)).
+- <a name="wvRotAxes"></a>the working volume file also describes the pointer rotation axes (`ROLL`, `PITCH`, `YAW`) **in the coordinate system of the tracker**.  :warning: These axes need to match those set for the [pointer](#ptrRotAxes) (see example in the [Troubleshooting section](#tbWrongOrientation)).
 
 - the model name of the tracker (`MODEL`) is also given in the working volume file. The name has to match one of the models included in `module_path\Resources\models`. For example, `MODEL = ftk500` will prompt the software to load the 3D model `ftk500_RAS.stl`.
 
@@ -290,7 +301,7 @@ Once all the enabled tests for all the enabled locations are done, the program g
    - See the recommendation for [artificially ending the rotation measurements](#artifOutOfTracking) prematurly.
    
 5. <a name="tbWrongOrientation"></a>*The pointer is misoriented in the rendering and/or the angle values are not near 0 when "facing" the tracker.*
-   - There is a mismatch between the rotation axes in the tracker's coordinate system (in the [working volume file](#wvRotAxes)) and the rotation axes in the pointer's coordinate system (in the [pointer file](#ptrRotAxes)). Those axes should be the same in the world's coordinate system and they are important as they allow for 1) a correct interpretation of the pointer rotations with respect to the tracker and 2) a correct orientation of the 3D pointer model in the display.
+   - There is a mismatch between the rotation axes in the tracker's coordinate system (in the [working volume file](#wvRotAxes)) and the rotation axes in the pointer's coordinate system (in the [pointer file](#ptrRotAxes)). Those axes should be the same in the world's coordinate system and they are important as they allow for 1) a correct interpretation of the pointer rotations with respect to the tracker and 2) a correct orientation of the 3D pointer model in the display. Below is an illustrated example of rotation axes in both coordinate systems:
 
 ![RotationAxes](/readme_img/rotation_axes_light.svg#gh-light-mode-only)
 ![RotationAxes](/readme_img/rotation_axes_dark.svg#gh-dark-mode-only)
