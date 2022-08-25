@@ -156,7 +156,7 @@ The sequence of divots used for the multi-point test is given by `SEQ` and the i
 REF = 1 19 18
 SEQ = 20 18 12 6 1 7 13 19 25 22 28 30 32 34 37 35 40 42 44 46
 CTR = 20
-MODEL = phantomV1
+MODEL = phantom2018
 
 POINT 1
 X 0.00
@@ -173,7 +173,7 @@ Z -0.01
 ...
 ```
 
-The model name of the phantom (`MODEL`) is also given in the parameter file. The name has to match one of the models included in `module_path\Resources\models`. For example, `MODEL = phantomV1` will prompt the software to load the 3D model `phantomV1_RAS.stl`.
+The model name of the phantom (`MODEL`) is also given in the parameter file. The name has to match one of the models included in `module_path\Resources\models`. For example, `MODEL = phantomV1` will prompt the software to load the 3D model `phantom2018_RAS.stl`. Two models are already included, corresponding to the last two revisions of the standard in 2018 and 2022.
 
 # Usage<a name="usage"></a>
 ## Setup<a name="setup"></a>
