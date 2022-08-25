@@ -132,9 +132,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       # Create logic class. Logic implements all computations that should be possible to run
       # in batch mode, without a graphical user interface.
-      self.logic = AstmPhantomTestLogic(self.resourcePath('models/phantom_RAS.stl'),
-        self.resourcePath('models/pointer_RAS.stl'), self.resourcePath('models/simpPhantom_RAS.stl'),
-        self.resourcePath(''), savePath)
+      self.logic = AstmPhantomTestLogic(self.resourcePath('models/pointer_RAS.stl'),
+      self.resourcePath('models/simpPhantom_RAS.stl'), self.resourcePath(''), savePath)
 
       # Forward some rendering handles to the logic class
       self.logic.mainWidget = slicer.app.layoutManager().threeDWidget('ViewMain')
@@ -152,16 +151,13 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       self.logic.initialize()
 
-      # Adding models to the various displays
-      # Display of the full phantom and pointer to the main scene
-      self.logic.phantom.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
-      self.logic.pointer.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
       # Display of the simplified phantom to the working volume guidance scenes
       self.logic.workingVolume.simpPhantomModel.GetDisplayNode().VisibilityOff()
       self.logic.workingVolume.simpPhantomModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeTopWV')
       self.logic.workingVolume.simpPhantomModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeFrontWV')
       # Forward models folder path
       self.logic.workingVolume.modelsFolderPath = self.resourcePath('models/')
+      self.logic.phantom.modelsFolderPath = self.resourcePath('models/')
 
       ## Connections
 
@@ -805,11 +801,12 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  def __init__(self, phantomModelPath, pointerModelPath, simpPhantomPath, resourcePath, savePath):
+  def __init__(self, pointerModelPath, simpPhantomPath, resourcePath, savePath):
     """
     Called when the logic class is instantiated. Can be used for initializing member variables.
     """    
     ScriptedLoadableModuleLogic.__init__(self)
+    self.pointerModelPath = pointerModelPath
     self.simpPhantomPath = simpPhantomPath
     self.resourcePath = resourcePath
     self.savePath = savePath
@@ -828,16 +825,6 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.frontWVWidget = None
     self.frontWVRenderer = None
 
-    # Creating core objects
-    self.operatorId = None
-    self.trackerId = None
-    self.phantom = Phantom()
-    self.phantom.readModel(phantomModelPath)
-    self.calibratingPhantom = False
-    self.pointer = Pointer()
-    self.pointer.maxTilt = 50
-    self.pointer.readModel(pointerModelPath)
-
     # Loading some sounds
     self.sounds = {}
     self.sounds["plop"] = qt.QSound(self.resourcePath + "sounds/plop.wav")
@@ -847,15 +834,26 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.sounds["touchdown"] = qt.QSound(self.resourcePath + "sounds/touchdown.wav")
 
   def initialize(self):
-    # Creating the targets and the working volume
+    self.operatorId = None
+    self.trackerId = None
+    # Phantom
+    self.phantom = Phantom(self.mainRenderer)
+    self.calibratingPhantom = False
+    # Pointer
+    self.pointer = Pointer()
+    self.pointer.maxTilt = 50
+    if self.mainRenderer is not None: # if rendering is enabled
+      self.pointer.readModel(self.pointerModelPath)
+    # Targets
     self.targets = Targets(self.mainRenderer)
     self.targetsDone = Targets(self.mainRenderer)
+    # Working volume
     self.workingVolume = WorkingVolume(self.topWVRenderer, self.frontWVRenderer)
     self.workingVolume.readSimpPhantomModel(self.simpPhantomPath)
     self.wvTargetsTop = Targets(self.workingVolume.renTop)
     self.wvTargetsFront = Targets(self.workingVolume.renFront)
     self.curLoc = "X" # null location in the working volume
-
+    # Tests
     self.tests = [[]] # initialization
     self.testsToDo = []
     # Create all the tests (even if they might not be used)

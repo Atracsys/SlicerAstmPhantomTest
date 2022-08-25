@@ -11,13 +11,16 @@ import numpy as np
 class Phantom(vtk.vtkObject):
   """This is a custom class for the pointer
   """
-  def __init__(self):
+  def __init__(self, renderer):
     super().__init__()
     self.id = "XXXXXYY" # phantom id, typically its serial number (XXXXX) and maybe also divot shape (YY)
+    self.renderer = renderer
+    self.rendering = self.renderer is not None
+    self.modelsFolderPath = None
+    self.model = None
+    
     self.centralDivot = None # id of the central divot
     self.transfoNode = None
-    self.model = None
-    self.modelPath = None
     self.calibStartedEvent = vtk.vtkCommand.UserEvent + 1
     self.calibratedEvent = vtk.vtkCommand.UserEvent + 2
 
@@ -33,7 +36,8 @@ class Phantom(vtk.vtkObject):
     self.lblY = None
     self.gtPts = None  # divot coordinates as given by the geometry file, used only for distance measuring
     self.seq = None # sequence of divots for the distance test
-    self.resetCalib()
+    self.calGtPts = {} # divot coordinates after calibration, can be used both for distance and visualization
+    self.calibrated = False
 
   def resetCalib(self):
     # divot coordinates after calibration, can be used both for distance and visualization
@@ -41,21 +45,33 @@ class Phantom(vtk.vtkObject):
     self.calibrated = False
     self.readModel()
 
-  def readModel(self, path = None):
-    # store model path
-    if path:
-      self.modelPath = path
-    if self.modelPath:
-      # check if the model node already exists, if so remove it
-      prevModelNode = slicer.mrmlScene.GetFirstNodeByName('PhantomModel')
-      if prevModelNode:
-        prevModelNode.RemoveAllObservers()
-        slicer.mrmlScene.RemoveNode(prevModelNode)
-      logging.info("Read phantom model")
-      self.model = slicer.util.loadModel(self.modelPath)
-      self.model.SetName('PhantomModel')
-      self.model.GetDisplayNode().SetColor(0,0.8,1.0)
-      self.model.GetDisplayNode().VisibilityOff()
+  def readModel(self):
+    # check that models folder is defined
+    if not self.modelsFolderPath:
+      msg = f"No models folder defined."
+      logging.error(msg)
+      slicer.util.errorDisplay(msg)
+      return False
+    if not self.modelId:
+      msg = f"Trying to (re)load phantom model, but no model id was provided."
+      logging.error(msg)
+      slicer.util.errorDisplay(msg)
+      return False
+    # check if the model node already exists, if so remove it
+    prevModelNode = slicer.mrmlScene.GetFirstNodeByName('PhantomModel')
+    if prevModelNode:
+      slicer.mrmlScene.RemoveNode(prevModelNode)
+    logging.info("Read phantom model")
+    self.model = slicer.util.loadModel(self.modelsFolderPath + '/' + self.modelId + '_RAS.stl')
+    if not self.model:
+      msg = f"Could not (re)load phantom model, check models folder path and model id."
+      logging.error(msg)
+      slicer.util.errorDisplay(msg)
+      return False
+    self.model.SetName('PhantomModel')
+    self.model.GetDisplayNode().SetColor(0,0.8,1.0)
+    self.model.GetDisplayNode().VisibilityOff()
+    return True
 
   def readGroundTruthFile(self, path):
     """
@@ -72,8 +88,11 @@ class Phantom(vtk.vtkObject):
     # Read parameters
     for l in lines:
       if not l == "\n":
-        if l.startswith("REF"):
-          ref = l.split("=")[1].split()
+        ss = l.split('=') # split string
+        if l.startswith('MODEL'):
+          self.modelId = ss[1].replace(" ", "").replace("\n","") # store model id without space and new line chars
+        elif l.startswith("REF"):
+          ref = ss[1].split()
           if len(ref) != 3:
             msg = "Ground truth file must have 3 referential labels (REF)"
             logging.error(msg)
@@ -84,10 +103,18 @@ class Phantom(vtk.vtkObject):
             self.lblX = int(ref[1])
             self.lblY = int(ref[2])
         elif l.startswith("SEQ"):
-          seq = l.split("=")[1].split()
+          seq = ss[1].split()
           self.seq = [int(w) for w in seq]
         elif l.startswith("CTR"):
-          self.centralDivot = int(l.split("=")[1])
+          self.centralDivot = int(ss[1])
+
+    # if rendering is enabled, add the phantom 3D model to the scene
+    if self.rendering:
+      if not self.readModel():
+        return False
+      # Display of the phantom to the main scene
+      self.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
+      self.model.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeMain')
 
     # Read ground truth values
     ptIds = [i for i, s in enumerate(lines) if s.startswith('POINT')]

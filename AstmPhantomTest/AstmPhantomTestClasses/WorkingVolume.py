@@ -78,6 +78,7 @@ class WorkingVolume(vtk.vtkObject):
     self.renFront = renFront
     self.rendering = self.renTop is not None and self.renFront is not None
     self.modelsFolderPath = None
+    self.trackerModel = None
 
     if self.rendering:
       self.actorTop = WorkingVolumeActor()
@@ -159,6 +160,35 @@ class WorkingVolume(vtk.vtkObject):
     slicer.app.processEvents() # let it breathe for a sec
     ResetCameraScreenSpace(self.renFront)
 
+  def readModel(self):
+    # check that models folder is defined
+    if not self.modelsFolderPath:
+      msg = f"No models folder defined."
+      logging.error(msg)
+      slicer.util.errorDisplay(msg)
+      return False
+    if not self.modelId:
+      msg = f"Trying to (re)load tracker model, but no model id was provided."
+      logging.error(msg)
+      slicer.util.errorDisplay(msg)
+      return False
+    # check if the model node already exists, if so remove it
+    prevModelNode = slicer.mrmlScene.GetFirstNodeByName('TrackerModel')
+    if prevModelNode:
+      slicer.mrmlScene.RemoveNode(prevModelNode)
+    logging.info("Read tracker model")
+    self.trackerModel = slicer.util.loadModel(self.modelsFolderPath + '/' + self.modelId + '_RAS.stl')
+    if not self.trackerModel:
+      msg = f"Could not (re)load tracker model, check models folder path and model id."
+      logging.error(msg)
+      slicer.util.errorDisplay(msg)
+      return False
+    self.trackerModel.SetName('TrackerModel')
+    self.trackerModel.GetDisplayNode().SetColor(0.8, 0.8, 0.8)
+    self.trackerModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeFrontWV')
+    self.trackerModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeTopWV')
+    return True
+
   def readWorkingVolumeFile(self, path):
     """
     Reads and parse the working volume coordinates
@@ -167,14 +197,14 @@ class WorkingVolume(vtk.vtkObject):
     logging.info(path)
     file = open(path, 'r')
     lines = file.readlines()
-    self.modelName = None
+    self.modelId = None
     nodes = {}
     self.locs = {} # locations provided in the file
     for l in lines:
       if not l == "\n":
         ss = l.split('=') # split string
         if l.startswith('MODEL'):
-          self.modelName = ss[1].replace(" ", "") # store model name without space char
+          self.modelId = ss[1].replace(" ", "").replace("\n","") # store model id without space and new line chars
         else:
           p = np.fromstring(ss[1], dtype=float, sep=' ')
           logging.info(f'   {ss[0]} {p.tolist()}')
@@ -209,17 +239,8 @@ class WorkingVolume(vtk.vtkObject):
     # if rendering is enabled, add the various 3D models to the scene
     if self.rendering:
       self.resetCameras()
-      
-      if self.modelsFolderPath and self.modelName:
-        prevModelNode = slicer.mrmlScene.GetFirstNodeByName('TrackerModel')
-        if prevModelNode:
-          slicer.mrmlScene.RemoveNode(prevModelNode)
-        logging.info("Read tracker model")
-        self.trackerModel = slicer.util.loadModel(self.modelsFolderPath + '/' + self.modelName + '_RAS.stl')
-        self.trackerModel.SetName('TrackerModel')
-        self.trackerModel.GetDisplayNode().SetColor(0.8, 0.8, 0.8)
-        self.trackerModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeFrontWV')
-        self.trackerModel.GetDisplayNode().AddViewNodeID('vtkMRMLViewNodeTopWV')
+      if not self.readModel():
+        return False
 
       if nodes:
         self.actorTop.setNodes(nodes)

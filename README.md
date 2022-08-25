@@ -156,6 +156,7 @@ The sequence of divots used for the multi-point test is given by `SEQ` and the i
 REF = 1 19 18
 SEQ = 20 18 12 6 1 7 13 19 25 22 28 30 32 34 37 35 40 42 44 46
 CTR = 20
+MODEL = phantomV1
 
 POINT 1
 X 0.00
@@ -171,6 +172,8 @@ Y 0.00
 Z -0.01
 ...
 ```
+
+The model name of the phantom (`MODEL`) is also given in the parameter file. The name has to match one of the models included in `module_path\Resources\models`. For example, `MODEL = phantomV1` will prompt the software to load the 3D model `phantomV1_RAS.stl`.
 
 # Usage<a name="usage"></a>
 ## Setup<a name="setup"></a>
@@ -310,7 +313,7 @@ Once all the enabled tests for all the enabled locations are done, the program g
 ![RotationAxes](/readme_img/rotation_axes_light.svg#gh-light-mode-only)
 ![RotationAxes](/readme_img/rotation_axes_dark.svg#gh-dark-mode-only)
 
-6. <a name="tbCustomSTL"></a>*I imported my own 3D models in STL format for the phantom, the pointer or tracker, and it shows in the wrong orientation in the 3D scene.*
+6. <a name="tbCustomSTL"></a>*I imported my own 3D models in STL format for the phantom, the pointer and/or tracker, and they are misoriented in the 3D scene.*
    - Slicer uses the [RAS convention](http://www.grahamwideman.com/gw/brain/orientation/orientterms.htm) for axes, which differs from the typical X,Y,Z spatial axes. For a correct interpretation of the STL file, it must be edited (e.g, using Notepad) and its first line shall include `SPACE=RAS`. For example, the first few lines of the STL can be:
    ```
    solid SPACE=RAS
@@ -320,3 +323,4 @@ Once all the enabled tests for all the enabled locations are done, the program g
       vertex 150 50 0
 	  ...
    ```
+   - Finally, the model for the pointer is not meant to be replaced. If you still want to do it, you can replace the model `pointer_RAS.stl` by the one of your choosing, but make sure that the origin and axes are the same and that the RAS space is specified as described above.
