@@ -108,6 +108,10 @@ It is important to keep the module up-to-date in order to benefit from future im
 
 ![Automatic update](/readme_img/update1.svg)
 
+Doing so, updates will be notified as a yellow dot on the Extensions Manager button (see below on the left). Browsing the extensions will then show you a restart prompt but also offer the possibility to cancel the update (see below on the right).
+
+![Update notification](/readme_img/update_notif.png) ![Update cancel](/readme_img/update_cancel.png)
+
 If you want to manage the updates yourself, you can also manually check and install the update from the Manage Extensions tab (1), click on `Check for updates` (2) and if an update is available, it will show up along with an `Update` button (3).
 
 ![Manual update](/readme_img/update2.svg)
