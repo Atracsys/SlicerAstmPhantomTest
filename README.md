@@ -286,6 +286,8 @@ Once all the enabled tests for all the enabled locations are done, the program g
 - a **json file** containing all the parameters and the actual measurements. This is meant to perform some more analysis if desired.
 - a **log file**, which contains all the events that occured during the session. The log is written in real-time, so even if the program crashes, the events are saved. The log file is common for all the sessions performed on a same day.
 
+Besides, a Matlab script (`AnalyzePhantomJSON.m`) is also provided that parses all the recorded measurements and display the results.
+
 # Troubleshooting<a name="trouble"></a>
 
 1. <a name="tbRemainingStatic"></a>*I'm having trouble acquiring a divot although my pointer is static (i.e. placed in a divot).*
