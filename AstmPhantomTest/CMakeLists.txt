@@ -12,7 +12,6 @@ set(RESOURCES_FILES
   Resources/gt/SN0001c.txt
   Resources/models/ftk250_RAS.stl
   Resources/models/ftk500_RAS.stl
-  Resources/models/phantom_RAS.stl
   Resources/models/pointer_RAS.stl
   Resources/models/simpPhantom_RAS.stl
   Resources/models/stk180_RAS.stl
@@ -32,7 +31,7 @@ set(RESOURCES_FILES
   Resources/wv/SpryTrack180.txt
   Resources/wv/SpryTrack300.txt
   )
-  
+
 set(PYTHON_CLASSES
   AstmPhantomTestClasses/__init__.py
   AstmPhantomTestClasses/Measurements.py
