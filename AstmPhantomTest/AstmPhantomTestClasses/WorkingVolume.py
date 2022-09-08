@@ -238,9 +238,9 @@ class WorkingVolume(vtk.vtkObject):
 
     # if rendering is enabled, add the various 3D models to the scene
     if self.rendering:
-      self.resetCameras()
       if not self.readModel():
         return False
+      self.resetCameras()
 
       if nodes:
         self.actorTop.setNodes(nodes)

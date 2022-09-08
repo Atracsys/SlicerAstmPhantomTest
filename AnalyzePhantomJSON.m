@@ -21,6 +21,10 @@ singFields={'Measurements', 'Accuracy', 'Average', 'Precision'};
 out.Single = cell2struct(cell(numel(locs),1),locs);
 cats = ["Measurements"; "Accu.Mean"; "Accu.Max"; "Prec.Span"; "Prec.RMS"];
 singTable = table(cats);
+singPlot_locs = [];
+singPlot_mean = [];
+singPlot_max = [];
+singPlot_rms = [];
 for l=1:numel(locs)
     % Create structures
     out.Single.(locs{l}) = cell2struct(cell(numel(singFields),1),singFields);
@@ -34,15 +38,18 @@ for l=1:numel(locs)
         % Number of measurements
         out.Single.(locs{l}).Measurements = size(data.SinglePointMeasurements.(locs{l}),1);
         assert(size(p,1)==out.Single.(locs{l}).Measurements);
+        singPlot_locs = [singPlot_locs; l];
         % Accuracy --------------------------
         % One error vector is the vector from the calibrated position of the
         % central divot to the position of the measurement.
         % The bias is the vectorial average of all error vectors.
         % The mean error is the norm of the bias.
         out.Single.(locs{l}).Accuracy.Mean = sqrt(sum(mean(p-cdiv,1).^2,2));
+        singPlot_mean = [singPlot_mean; out.Single.(locs{l}).Accuracy.Mean];
         % The max error is the largest norm of an error vector
         errors = sqrt(sum((p-cdiv).^2,2));
         out.Single.(locs{l}).Accuracy.Max = max(errors);
+        singPlot_max = [singPlot_max; out.Single.(locs{l}).Accuracy.Max];
         % Average --------------------------
         % The average of all measured positions is the best estimation of the
         % central divot position
@@ -62,6 +69,7 @@ for l=1:numel(locs)
         % standard deviation of the measured positions in this case)
         devs = sqrt(sum((p-mean(p,1)).^2,2));
         out.Single.(locs{l}).Precision.RMS = sqrt(mean((devs).^2));
+        singPlot_rms = [singPlot_rms; out.Single.(locs{l}).Precision.RMS];
         % Dump values in table
         singTable.(locs{l}) = [out.Single.(locs{l}).Measurements;...
             out.Single.(locs{l}).Accuracy.Mean;...
@@ -73,6 +81,23 @@ for l=1:numel(locs)
     end
 end
 singTable
+if ishandle(4), close(4); end
+if numel(singPlot_locs)>0
+    figure(4),
+    bar(singPlot_locs, singPlot_mean, 'DisplayName', 'Mean');
+    xlim([0 numel(singPlot_locs)+1]);
+    xticklabels(locs)
+    xlabel("Locations")
+    ylabel("Millimeters")
+    title('Single Point Error')
+    hold on;
+    er = errorbar(singPlot_locs, singPlot_mean, singPlot_rms, 'DisplayName', 'RMS');
+    er.LineStyle = 'none';
+    scatter(singPlot_locs, singPlot_max, 'DisplayName', 'Max', 'MarkerFaceColor',...
+        [0.8500 0.3250 0.0980],'MarkerEdgeColor',[0.8500 0.3250 0.0980]);
+    legend;
+end
+
 
 %% Rotations
 rotations=["Roll", "Pitch", "Yaw"];
@@ -104,10 +129,15 @@ distFields={'Num', 'Mean', 'Max', 'RMS'};
 out.Dist = cell2struct(cell(numel(locs),1),locs);
 cats = ["Num."; "DistErr.Mean"; "DistErr.Max"; "DistErr.RMS"];
 distTable = table(cats);
+distPlot_locs = [];
+distPlot_mean = [];
+distPlot_max = [];
+distPlot_rms = [];
 for l=1:numel(locs)
     % Create structures
     out.Dist.(locs{l}) = cell2struct(cell(numel(distFields),1),distFields);
     if isfield(data.Multi_pointMeasurements, locs{l})
+        distPlot_locs = [distPlot_locs; l];
         % Calculate the distances between all combinations of measured
         % positions and compare them to the distances from calibrated positions
         ids = fields(data.Multi_pointMeasurements.(locs{l}));
@@ -127,10 +157,13 @@ for l=1:numel(locs)
         out.Dist.(locs{l}).Num = numel(errors);
         % Mean
         out.Dist.(locs{l}).Mean = mean(errors);
+        distPlot_mean = [distPlot_mean; out.Dist.(locs{l}).Mean];
         % Max
         out.Dist.(locs{l}).Max = max(errors);
+        distPlot_max = [distPlot_max; out.Dist.(locs{l}).Max];
         % RMS
         out.Dist.(locs{l}).RMS = sqrt(mean(errors.^2));
+        distPlot_rms = [distPlot_rms; out.Dist.(locs{l}).RMS];
         % Dump values in table
         distTable.(locs{l}) = [out.Dist.(locs{l}).Num;...
             out.Dist.(locs{l}).Mean;...
@@ -141,3 +174,19 @@ for l=1:numel(locs)
     end
 end
 distTable
+if ishandle(5), close(5); end
+if numel(distPlot_locs)>0
+    figure(5),
+    bar(distPlot_locs, distPlot_mean, 'DisplayName', 'Mean');
+    xlim([0 numel(distPlot_locs)+1]);
+    xticklabels(locs)
+    xlabel("Locations")
+    ylabel("Millimeters")
+    title('Distances Error')
+    hold on;
+    er = errorbar(distPlot_locs, distPlot_mean, distPlot_rms, 'DisplayName', 'RMS');
+    er.LineStyle = 'none';
+    scatter(distPlot_locs, distPlot_max, 'DisplayName', 'Max', 'MarkerFaceColor',...
+        [0.8500 0.3250 0.0980],'MarkerEdgeColor',[0.8500 0.3250 0.0980]);
+    legend;
+end

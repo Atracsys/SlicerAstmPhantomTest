@@ -139,7 +139,6 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.logic.mainWidget = slicer.app.layoutManager().threeDWidget('ViewMain')
       self.logic.mainWidget.show()
       self.logic.mainRenderer = self.logic.mainWidget.threeDView().renderWindow().GetRenderers().GetItemAsObject(0)
-      self.logic.mainRenderer.ResetCamera()
 
       self.logic.topWVWidget = slicer.app.layoutManager().threeDWidget('ViewTopWV')
       self.logic.topWVWidget.hide()
@@ -223,22 +222,16 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       ptrFiles = [f for f in os.listdir(self.resourcePath('./ptr')) if re.match(r'.*\.txt', f)]
       self.ui.pointerFileSelector.addItems(ptrFiles)
       self.ui.pointerFileSelector.currentIndexChanged.connect(self.onPointerFileChanged)
-      # call as the first item is automatically selected
-      self.onPointerFileChanged()
 
       # Parse resource folder for ground truth files (gt/SN____.txt)
       gtFiles = [f for f in os.listdir(self.resourcePath('./gt')) if re.match(r'SN[0-9]+.*\.txt', f)]
       self.ui.groundTruthFileSelector.addItems(gtFiles)
       self.ui.groundTruthFileSelector.currentIndexChanged.connect(self.onGroundTruthFileChanged)
-      # call as the first item is automatically selected
-      self.onGroundTruthFileChanged()
 
       # Parse resource folder for working volume files (wv/____.txt)
       wvFiles = [f for f in os.listdir(self.resourcePath('./wv')) if re.match(r'.*\.txt', f)]
       self.ui.workingVolumeFileSelector.addItems(wvFiles)
       self.ui.workingVolumeFileSelector.currentIndexChanged.connect(self.onWorkingVolumeFileChanged)
-      # call as the first item is automatically selected
-      self.onWorkingVolumeFileChanged()
 
       # Adding the observer watching out for the new transform node after openigtlink connection
       slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onNodeAdded)
@@ -604,6 +597,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # if phantom calibration not done and not started, launch it
       if not self.logic.phantom.calibrated and not self.logic.calibratingPhantom:
         self.logic.startPhantomCalibration()
+        self.logic.resetCam()
 
   def onTrackerIdChanged(self):
     tk = self.ui.trackerLineEdit.text
@@ -709,11 +703,11 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.logic.mainRenderer.RemoveActor(self.welcomeText)
         self.ui.trackerLineEdit.enabled = True
         self.ui.trackerLineEdit.setFocus()
-        self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
         # Selectors call since combobox already selected first item in each
         self.onPointerFileChanged()
-        self.onWorkingVolumeFileChanged()
         self.onGroundTruthFileChanged()
+        self.onWorkingVolumeFileChanged()
+        self.logic.process(self.ptrRefNode, self.refNode, self.ptrNode)
 
   def cleanup(self):
     """
@@ -891,7 +885,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     # forward the transforms given by the tracker to the pointer model
     self.pointer.setTransfoNodes(ptrRefTransfoNode, ptrTransfoNode)
     # hide pointer model until phantom calibrated
-    self.phantom.model.GetDisplayNode().VisibilityOn()
+    self.pointer.model.GetDisplayNode().VisibilityOff()
 
     # connections between the targets object (empty for now) and the pointer
     self.pointer.AddObserver(self.pointer.stoppedEvent, self.targets.onTargetFocus)
@@ -1027,6 +1021,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     if self.phantom.calibrated:
       self.phantom.resetCalib()
       self.pointer.model.GetDisplayNode().VisibilityOff()
+    self.phantom.model.GetDisplayNode().VisibilityOn()
 
     # if another acquisition was already started
     self.pointer.timer.stop()
@@ -1136,6 +1131,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.topWVWidget.show()
       self.frontWVWidget.show()
       self.workingVolume.simpPhantomModel.GetDisplayNode().VisibilityOn()
+      self.pointer.model.GetDisplayNode().VisibilityOff()
 
     slicer.app.processEvents() # makes sure the rendering/display is done before continuing
     if self.topWVRenderer:
@@ -1188,6 +1184,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.InvokeEvent(self.locationFinished, self.curLoc)
       self.startWorkingVolumeGuidance()
     else:
+      self.pointer.model.GetDisplayNode().VisibilityOn()
       self.InvokeEvent(self.testStarted, self.testsToDo[0])
       if self.testsToDo[0] == 'single':
         self.startSinglePtTest()
