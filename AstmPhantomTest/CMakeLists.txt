@@ -12,7 +12,8 @@ set(RESOURCES_FILES
   Resources/gt/SN0001c.txt
   Resources/models/ftk250_RAS.stl
   Resources/models/ftk500_RAS.stl
-  Resources/models/phantom_RAS.stl
+  Resources/models/phantom2018_RAS.stl
+  Resources/models/phantom2022_RAS.stl
   Resources/models/pointer_RAS.stl
   Resources/models/simpPhantom_RAS.stl
   Resources/models/stk180_RAS.stl
