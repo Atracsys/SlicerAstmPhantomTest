@@ -7,9 +7,7 @@ set(MODULE_PYTHON_SCRIPTS
   )
 
 set(RESOURCES_FILES
-  Resources/gt/SN0001a.txt
-  Resources/gt/SN0001b.txt
-  Resources/gt/SN0001c.txt
+  Resources/gt/phantom.txt
   Resources/models/ftk250_RAS.stl
   Resources/models/ftk500_RAS.stl
   Resources/models/phantom2018_RAS.stl
