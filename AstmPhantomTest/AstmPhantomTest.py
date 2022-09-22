@@ -221,17 +221,20 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # Parse resource folder for pointer files (ptr/____.txt)
       ptrFiles = [f for f in os.listdir(self.resourcePath('./ptr')) if re.match(r'.*\.txt', f)]
       self.ui.pointerFileSelector.addItems(ptrFiles)
-      self.ui.pointerFileSelector.currentIndexChanged.connect(self.onPointerFileChanged)
+      if len(ptrFiles) > 0:
+        self.ui.pointerFileSelector.currentIndexChanged.connect(self.onPointerFileChanged)
 
       # Parse resource folder for ground truth files (gt/SN____.txt)
-      gtFiles = [f for f in os.listdir(self.resourcePath('./gt')) if re.match(r'SN[0-9]+.*\.txt', f)]
+      gtFiles = [f for f in os.listdir(self.resourcePath('./gt')) if re.match(r'.*\.txt', f)]
       self.ui.groundTruthFileSelector.addItems(gtFiles)
-      self.ui.groundTruthFileSelector.currentIndexChanged.connect(self.onGroundTruthFileChanged)
+      if len(gtFiles) > 0:
+        self.ui.groundTruthFileSelector.currentIndexChanged.connect(self.onGroundTruthFileChanged)
 
       # Parse resource folder for working volume files (wv/____.txt)
       wvFiles = [f for f in os.listdir(self.resourcePath('./wv')) if re.match(r'.*\.txt', f)]
       self.ui.workingVolumeFileSelector.addItems(wvFiles)
-      self.ui.workingVolumeFileSelector.currentIndexChanged.connect(self.onWorkingVolumeFileChanged)
+      if len(wvFiles) > 0:
+        self.ui.workingVolumeFileSelector.currentIndexChanged.connect(self.onWorkingVolumeFileChanged)
 
       # Adding the observer watching out for the new transform node after openigtlink connection
       slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onNodeAdded)
