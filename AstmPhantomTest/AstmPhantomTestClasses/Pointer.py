@@ -210,7 +210,7 @@ class Pointer(vtk.vtkObject):
       # retrieve pointer position
       self.pq.push(self.pos())
       # if moved by more than the moving tolerance from last position in queue
-      if self.pq.stride() > self.movingTol:
+      if self.pq.strideMed(10,10) > 0.5:
         if not self.moving:
           self.moving = True
           self.InvokeEvent(self.movedEvent)

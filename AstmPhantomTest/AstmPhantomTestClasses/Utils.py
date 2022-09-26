@@ -8,8 +8,14 @@ import itertools  # for combinations
 
 class PosQueue():
   def __init__(self, size):
-    self.queue = []
     self.maxsz = size
+    self.reset()
+
+  def size(self):
+    return len(self.queue)
+
+  def reset(self):
+    self.queue = []
     self.sum = np.array([0,0,0], dtype='float64')
 
   def push(self, pos):
@@ -18,8 +24,31 @@ class PosQueue():
     if len(self.queue) > self.maxsz:
       self.sum -= self.queue.pop()
 
+  def strideMed(self, w1, w2):
+    if len(self.queue) < self.maxsz:
+      return float('inf')
+    if (w1 <= 0 or w2 <=0 or w1+w2 > self.maxsz):
+      w1 = 1
+      w2 = 1
+    firstPos = np.median(self.queue[:w1], axis=0)
+    lastPos = np.median(self.queue[-w2:], axis=0)
+    return np.linalg.norm(firstPos - lastPos) # distance between first and last positions in queue
+
+  def strideMean(self, w1, w2):
+    if len(self.queue) < self.maxsz:
+      return float('inf')
+    if (w1 <= 0 or w2 <=0 or w1+w2 > self.maxsz):
+      w1 = 1
+      w2 = 1
+    firstPos = np.mean(self.queue[:w1], axis=0)
+    lastPos = np.mean(self.queue[-w2:], axis=0)
+    return np.linalg.norm(firstPos - lastPos) # distance between first and last positions in queue
+
   def stride(self):
-    return np.linalg.norm(self.queue[0] - self.queue[-1]) # distance between first and last positions in queue
+    if len(self.queue) < self.maxsz:
+      return float('inf')
+    else:
+      return np.linalg.norm(self.queue[0] - self.queue[-1]) # distance between first and last positions in queue
   
   def avg(self):
     return self.sum/len(self.queue)

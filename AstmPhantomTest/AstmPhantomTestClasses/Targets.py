@@ -20,7 +20,7 @@ class Targets(vtk.vtkObject):
     # used to automatically detect target from pointer position
     self.proxiDetect = False
     # distance threshold from pointer to a target to be considered hit
-    self.proxiThresh = 2  # mm
+    self.proxiThresh = 4  # mm
     self.targetHitEvent = vtk.vtkCommand.UserEvent + 1
     self.targetOutEvent = vtk.vtkCommand.UserEvent + 2
     self.targetDoneEvent = vtk.vtkCommand.UserEvent + 3
