@@ -185,6 +185,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.locCheckBoxLL.connect('stateChanged(int)', self.onLocCheckBoxLLChanged)
       self.ui.locCheckBoxRL.connect('stateChanged(int)', self.onLocCheckBoxRLChanged)
       self.ui.resCamButton.connect('clicked()', self.logic.resetCam)
+      self.ui.recalibOptionCheckBox.connect('stateChanged(int)', self.logic.setRecalibAtLocation)
 
       self.ui.hackCalibButton.connect('clicked()', self.hackCalib)
       self.ui.hackCLButton.connect('clicked()', self.hackCL)
@@ -202,6 +203,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.onMovingTolChangedFromLocation)
       self.logic.phantom.AddObserver(self.logic.phantom.calibStartedEvent,
         self.onCalibratingPhantom)
+      self.logic.phantom.AddObserver(self.logic.phantom.firstCalibratedEvent,
+        self.onPhantomFirstCalibrated)
       self.logic.phantom.AddObserver(self.logic.phantom.calibratedEvent,
         self.onPhantomCalibrated)
       self.logic.wvTargetsTop.AddObserver(self.logic.wvTargetsTop.targetHitEvent, self.onLocHit)
@@ -346,11 +349,10 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.logic.mainRenderer.AddActor(self.calibratingText)
 
   @vtk.calldata_type(vtk.VTK_STRING)
-  def onPhantomCalibrated(self, caller, event = None, calldata = None):
+  def onPhantomFirstCalibrated(self, caller, event = None, calldata = None):
     """
-    Called when the phantom is calibrated
+    Called when the phantom is first calibrated
     """
-    self.logic.mainRenderer.RemoveActor(self.calibratingText)
     # Enable locations checkboxes
     self.ui.locCheckBoxCL.enabled = self.ui.locCheckBoxCL.checked
     self.ui.locCheckBoxBL.enabled = self.ui.locCheckBoxBL.checked
@@ -366,6 +368,14 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # Disable some parameters in UI
     self.ui.hackCalibButton.enabled = False
     self.ui.operatorLineEdit.enabled = False
+    self.ui.recalibOptionCheckBox.enabled = False
+
+  @vtk.calldata_type(vtk.VTK_STRING)
+  def onPhantomCalibrated(self, caller, event = None, calldata = None):
+    """
+    Called when the phantom is calibrated
+    """
+    self.logic.mainRenderer.RemoveActor(self.calibratingText)
     # Update moving tolerance
     self.onMovingTolChangedFromLocation(self.logic.phantom)
 
@@ -482,6 +492,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.hackTLButton.enabled = False
     self.ui.hackLLButton.enabled = False
     self.ui.hackRLButton.enabled = False
+    self.ui.recalibOptionCheckBox.enabled = False
     # Display message for session end
     self.endText = vtk.vtkCornerAnnotation()
     self.endText.GetTextProperty().SetFontSize(200)
@@ -600,7 +611,6 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # if phantom calibration not done and not started, launch it
       if not self.logic.phantom.calibrated and not self.logic.calibratingPhantom:
         self.logic.startPhantomCalibration()
-        self.logic.resetCam()
 
   def onTrackerIdChanged(self):
     tk = self.ui.trackerLineEdit.text
@@ -609,12 +619,14 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.pointerFileSelector.enabled = True
         self.ui.workingVolumeFileSelector.enabled = True
         self.ui.groundTruthFileSelector.enabled = True
-        self.ui.operatorLineEdit.enabled = True
         # Enable point acquisition parametrization
         self.ui.pointAcqui1frameButton.enabled = True
         self.ui.pointAcquiMeanButton.enabled = True
         self.ui.pointAcquiMedianButton.enabled = True
         self.ui.pointAcquiNumFramesLineEdit.text = str(self.logic.pointer.numFrames)
+        # Enable other options
+        self.ui.operatorLineEdit.enabled = True
+        self.ui.recalibOptionCheckBox.enabled = True
 
     self.logic.trackerId = tk
     logging.info(f"Tracker Serial Number: {self.logic.trackerId}")
@@ -623,6 +635,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.pointAcquiNumFramesLineEdit.enabled = False
     self.ui.pointAcquiFramesLabel.enabled = False
     self.logic.pointer.acquiMode = 0
+    self.logic.pointer.timerDuration = 500  # ms
     logging.info("Point acquisition set to 1-frame")
   
   def onPointAcquiMeanSet(self):
@@ -849,7 +862,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.workingVolume.readSimpPhantomModel(self.simpPhantomPath)
     self.wvTargetsTop = Targets(self.workingVolume.renTop)
     self.wvTargetsFront = Targets(self.workingVolume.renFront)
-    self.curLoc = "X" # null location in the working volume
+    self.curLoc = "INIT" # null location in the working volume
     # Tests
     self.tests = [[]] # initialization
     self.testsToDo = []
@@ -862,6 +875,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.angleAnn = None # annotation actor for angle values
     #   Distance accuracy test
     self.distMeasurement = DistMeasurement()
+    self.recalibAtLocation = True
 
   def process(self, ptrRefTransfoNode, refTransfoNode, ptrTransfoNode):
     """
@@ -889,6 +903,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.pointer.setTransfoNodes(ptrRefTransfoNode, ptrTransfoNode)
     # hide pointer model until phantom calibrated
     self.pointer.model.GetDisplayNode().VisibilityOff()
+    # assign reference transform to simp phantom
+    self.workingVolume.setTransfoNode(self.refTransfoNode)
 
     # connections between the targets object (empty for now) and the pointer
     self.pointer.AddObserver(self.pointer.stoppedEvent, self.targets.onTargetFocus)
@@ -915,7 +931,9 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
   def resetCam(self):
     if self.mainWidget.isVisible():
-      if len(self.testsToDo) == 0:
+      if self.calibratingPhantom:
+        self.placeCamWrtPhantom(False)
+      elif len(self.testsToDo) == 0:
         self.placeCamWrtPhantom(False)
       elif self.testsToDo[0] in ['roll', 'pitch', 'yaw']:
         self.placeCamWrtPhantom(True)
@@ -924,11 +942,15 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     elif self.topWVWidget.isVisible() and self.frontWVWidget.isVisible():
       self.workingVolume.resetCameras()
 
+  def setRecalibAtLocation(self, val):
+    self.recalibAtLocation = val
+
   def placeCamWrtPhantom(self, pointer = False):
     def placeCam(self, camPos, camDir):
-      O = self.phantom.divPos(self.phantom.lblO)
-      X = self.phantom.divPos(self.phantom.lblX)
-      Y = self.phantom.divPos(self.phantom.lblY)
+      # Origin O, X and Y are assumed to be the three first calib labels respectively
+      O = self.phantom.divPos(self.phantom.calibLabels[0])
+      X = self.phantom.divPos(self.phantom.calibLabels[1])
+      Y = self.phantom.divPos(self.phantom.calibLabels[2])
       vx = (X - O)/Dist(X, O)
       vy = (Y - O)/Dist(Y, O)
       vz = np.cross(vx, vy)
@@ -1007,7 +1029,6 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
   def readGroundTruthFile(self, path):
     if self.phantom.readGroundTruthFile(path):
-      self.placeCamWrtPhantom(False)
       return True
     else:
       return False
@@ -1015,6 +1036,10 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # --------------------- Calibration ---------------------
   def startPhantomCalibration(self):
     logging.info('Calibration started')
+    # initialize calibrated points for the current location
+    self.phantom.calGtPts = {}
+    identityMat = vtk.vtkMatrix4x4()
+    self.phantom.calibTransfoNode.SetMatrixTransformToParent(identityMat)
     # make sure the correct scene is rendered
     if self.mainWidget and self.topWVWidget and self.frontWVWidget:
       self.mainWidget.show()
@@ -1031,17 +1056,18 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.RemoveAllObservers()
     self.targets.removeAllTargets()  # making sure targets is empty
 
-    # start the calibration
-    self.pointer.timerDuration = 500  # ms
-    self.targets.addTarget(self.phantom.lblO, self.phantom.divPos(self.phantom.lblO), True)
-    self.targets.addTarget(self.phantom.lblX, self.phantom.divPos(self.phantom.lblX), False)
-    self.targets.addTarget(self.phantom.lblY, self.phantom.divPos(self.phantom.lblY), False)
+    # Create all targets but hidden
+    for l in self.phantom.calibLabels:
+      self.targets.addTarget(l, self.phantom.divPos(l), False)
+    # Display first target
+    self.targets.targets[self.phantom.calibLabels[0]].visible(True)
 
     self.calibObs1 = self.targets.AddObserver(self.targets.targetHitEvent, self.onCalibrationPointCheck)
     self.calibObs2 = self.targets.AddObserver(self.targets.targetDoneEvent, self.onCalibrationPointDone)
     self.calibObs3 = self.targets.AddObserver(self.targets.targetDoneOutEvent, self.onCalibrationPointDoneOut)
 
     self.calibratingPhantom = True
+    self.resetCam()
     self.phantom.InvokeEvent(self.phantom.calibStartedEvent)
 
   @vtk.calldata_type(vtk.VTK_STRING)
@@ -1052,7 +1078,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       theoDist = Dist(self.phantom.gtPts[k], self.phantom.gtPts[cd[0]])
       dist = Dist(self.phantom.calGtPts[k], cd[1:4])
       err = abs(theoDist - dist)
-      if err > 1.0:
+      if err > 5.0: #mm
         logging.info(f'   Invalid distance [{k}, {int(cd[0])}] (err = {err:.2f})')
         valid = False
     if valid:
@@ -1065,65 +1091,52 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     cd = ast.literal_eval(calldata)  # parse [id, px, py, pz]
     if not isinstance(cd, list):
       cd = [cd]
-    if cd[0] == self.phantom.lblO:
-      self.phantom.calGtPts[self.phantom.lblO] = np.array(cd[1:4])
-    if cd[0] == self.phantom.lblX:
-      self.phantom.calGtPts[self.phantom.lblX] = np.array(cd[1:4])
-    if cd[0] == self.phantom.lblY:
-      self.phantom.calGtPts[self.phantom.lblY] = np.array(cd[1:4])
+    if cd[0] in self.phantom.calibLabels:
+      self.phantom.calGtPts[cd[0]] = np.array(cd[1:4])
+      logging.info(f'   Divot #{cd[0]} calibrated at {cd[1:4]}')
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onCalibrationPointDoneOut(self, caller, event, calldata):
     cd = ast.literal_eval(calldata)  # parse id
     if not isinstance(cd, list):
       cd = [cd]
-    if cd[0] == self.phantom.lblO:
-      self.targets.removeTarget(self.phantom.lblO)
-    if cd[0] == self.phantom.lblX:
-      self.targets.removeTarget(self.phantom.lblX)
-    if cd[0] == self.phantom.lblY:
-      self.targets.removeTarget(self.phantom.lblY)
-    # try to calibrate (will skip if not all three corner targets acquired)
-    self.phantom.calibrate()
+    self.targets.removeTarget(cd[0])
 
-    if self.phantom.calibrated:
+    if self.phantom.canBeCalibrated():
+      self.phantom.calibrate()
+      slicer.app.processEvents() # make sure that
+      self.phantom.allCalGtPts[self.curLoc] = self.phantom.calGtPts
       self.calibratingPhantom = False
 
-      if self.phantom.model:
-        # permanently transform the phantom model according to the calibration matrix
-        self.phantom.model.SetAndObserveTransformNodeID(self.phantom.calibTransfoNode.GetID())
-        self.phantom.model.HardenTransform()
-        self.phantom.model.GetDisplayNode().VisibilityOn() # make it visible
-        slicer.app.processEvents() # makes sure the rendering/display is done before continuing
-
-      # new calib => new calibrated ground truth for the accuracy measurements
-      if self.singlePointMeasurement:
-        self.singlePointMeasurement.fullReset(self.phantom.calGtPts, self.phantom.centralDivot)
-      if self.distMeasurement:
-        self.distMeasurement.fullReset(self.phantom.calGtPts, self.phantom.seq)
-      # but also reset rotation measurements then
-      for r in self.rotMeasurements:
-        r.fullReset()
-
-      if self.workingVolume.simpPhantomModel:
-        # similarly permanently transform the simplified phantom model
-        self.workingVolume.simpPhantomModel.SetAndObserveTransformNodeID(
-            self.phantom.calibTransfoNode.GetID())
-        self.workingVolume.simpPhantomModel.HardenTransform()
-        # but this time, the hardened model is also transformed
-        self.workingVolume.setTransfoNode(self.refTransfoNode)
-        slicer.app.processEvents() # makes sure the rendering/display is done before continuing
-      
-      # Add offset to simp phantom position (in ref marker referential!)
-      # so that the central divot hits the wv targets
-      self.workingVolume.offset = self.phantom.calGtPts[self.phantom.centralDivot]
-
-      self.placeCamWrtPhantom()
-      self.pointer.model.GetDisplayNode().VisibilityOn()
       self.targets.RemoveObserver(self.calibObs1)
       self.targets.RemoveObserver(self.calibObs2)
       self.targets.RemoveObserver(self.calibObs3)
-      self.startWorkingVolumeGuidance()
+
+      # Add offset to simp phantom position (in ref marker referential!)
+      # so that the central divot hits the wv targets
+      self.workingVolume.offset = self.phantom.calGtPts[self.phantom.centralDivot]
+      # Update the calibration transform of simp phantom with the one from phantom
+      self.workingVolume.calibTransfoNode.CopyContent(self.phantom.calibTransfoNode)
+
+      if self.phantom.firstCalibration:
+        if self.singlePointMeasurement:
+          self.singlePointMeasurement.fullReset(self.phantom.calGtPts, self.phantom.centralDivot)
+        if self.distMeasurement:
+          self.distMeasurement.fullReset(self.phantom.calGtPts, self.phantom.seq)
+        # but also reset rotation measurements then
+        for r in self.rotMeasurements:
+          r.fullReset()
+
+        self.phantom.firstCalibration = False
+        self.startWorkingVolumeGuidance()
+      else:
+        # new calib => new calibrated ground truth for the accuracy measurements
+        if self.singlePointMeasurement:
+          self.singlePointMeasurement.setGtPts(self.phantom.calGtPts)
+        if self.distMeasurement:
+          self.distMeasurement.setGtPts(self.phantom.calGtPts)
+
+        self.initAndStartTests()
 
   # --------------------- Working volume guidance ---------------------
   def startWorkingVolumeGuidance(self):
@@ -1158,6 +1171,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   @vtk.calldata_type(vtk.VTK_STRING)
   def stopWorkingVolumeGuidance(self, caller, event, calldata):
     cd = ast.literal_eval(calldata)
+    prevLoc = self.curLoc
     self.curLoc = cd[0]
     logging.info(f'   Phantom placed for location {self.curLoc} at {np.around(cd[1:4],2).tolist()}')
     self.sounds["touchdown"].play()
@@ -1172,16 +1186,22 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.wvTargetsTop.proxiDetect = False
     self.wvTargetsTop.RemoveObserver(self.wvgObs2)
     self.pointer.setMovingTolerance(self.workingVolume.movingToleranceFromDepth(np.linalg.norm(cd[1:4])))
+
+    self.removeWorkingVolumeTarget(self.curLoc)
+    if self.recalibAtLocation:
+      self.startPhantomCalibration()
+    else:
+      self.initAndStartTests()
+
+  # ---------------------------- Tests Control -----------------------------
+  def initAndStartTests(self):
     # Initialize tests todo list
     self.testsToDo = []
     for t in self.tests:
       if t[1]:
         self.testsToDo.append(t[0])
-
-    self.removeWorkingVolumeTarget(self.curLoc)
     self.startNextTest()
 
-  # ---------------------------- Tests Control -----------------------------
   def startNextTest(self):
     if len(self.testsToDo) == 0:
       self.InvokeEvent(self.locationFinished, self.curLoc)
@@ -1206,19 +1226,17 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.singlePointMeasurement.acquiNumMax = 20
     self.singlePointMeasurement.curLoc = self.curLoc
     self.singlePointMeasurement.measurements[self.curLoc] = np.empty((0,3), float)
-    if self.mainRenderer:
-      if not self.singleAnn:
-        self.singleAnn = vtk.vtkCornerAnnotation()
-        self.singleAnn.GetTextProperty().SetFontSize(180)
-        self.singleAnn.SetLinearFontScaleFactor(20)
-        self.singleAnn.GetTextProperty().SetColor(1,0,0)
-        self.singleAnn.GetTextProperty().BoldOn()
-        self.singleAnn.GetTextProperty().ShadowOn()
-      self.mainRenderer.AddActor(self.singleAnn)
-      self.placeCamWrtPhantom() # place camera wrt phantom only
+    if not self.singleAnn:
+      self.singleAnn = vtk.vtkCornerAnnotation()
+      self.singleAnn.GetTextProperty().SetFontSize(180)
+      self.singleAnn.SetLinearFontScaleFactor(20)
+      self.singleAnn.GetTextProperty().SetColor(1,0,0)
+      self.singleAnn.GetTextProperty().BoldOn()
+      self.singleAnn.GetTextProperty().ShadowOn()
+    self.mainRenderer.AddActor(self.singleAnn)
+    self.resetCam()
 
     self.targets.proxiDetect = True
-    self.pointer.timerDuration = 500 # ms
     self.test1Obs1 = self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startAcquiring)
     self.test1Obs2 = self.targets.AddObserver(self.targets.targetDoneEvent, self.onSingPtMeasTargetDone)
     self.test1Obs3 = self.targets.AddObserver(self.targets.targetDoneOutEvent, self.onSingPtMeasTargetDoneOut)
@@ -1292,7 +1310,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.angleAnn.GetTextProperty().BoldOn()
       self.angleAnn.GetTextProperty().ShadowOn()
     self.angleAnn.SetText(2, "-.-") # 2 = top left
-    self.placeCamWrtPhantom(True) # place camera wrt phantom while showing pointer
+    self.resetCam()
 
     self.targets.proxiDetect = True
     self.rotTestObs1 = self.targets.AddObserver(self.targets.targetHitEvent,
@@ -1380,7 +1398,6 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
 
   def stopRotationTest(self):
     logging.info(f'----- [{self.curLoc}] {self.curRotAxisName} Rotation Test Stop -----')
-    self.placeCamWrtPhantom(False) # place camera wrt phantom ignoring pointer
     self.onRotMeasTargetOut(self) # stop monitoring tracking and angles
     self.targets.proxiDetect = False
     self.targets.removeAllTargets()
@@ -1396,8 +1413,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # ---------------------------- Multi-point Test -----------------------------
   def startDistTest(self):
     logging.info(f'***** [{self.curLoc}] Multi-point Test Start *****')
+    self.resetCam()
     self.targets.proxiDetect = True
-    self.pointer.timerDuration = 500 # ms
     self.distMeasurement.curLoc = self.curLoc
     self.distMeasurement.measurements[self.curLoc] = {}
 
@@ -1467,6 +1484,11 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     else:
       pointAcquiMode = "unknown"
 
+    if self.recalibAtLocation
+      recalibAtLocation_str = "Yes"
+    else:
+      recalibAtLocation_str = "No"
+
     obj = json.dumps({"Tracker Serial Number": self.trackerId,
       "Pointer": self.pointer.id,
       "Working Volume": self.workingVolume.id,
@@ -1476,7 +1498,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       "Duration": durStr,
       "Central Divot": self.phantom.centralDivot,
       "Point acquisition": pointAcquiMode,
-      "Calibrated Ground Truth": self.phantom.calGtPts,
+      "Recalibration at each location": recalibAtLocation_str,
+      "Calibrated Ground Truth": self.phantom.allCalGtPts,
       "Single Point Measurements": self.singlePointMeasurement.measurements,
       f"{self.rotMeasurements[0].rotAxisName} Rotation Measurements": self.rotMeasurements[0].measurements,
       f"{self.rotMeasurements[1].rotAxisName} Rotation Measurements": self.rotMeasurements[1].measurements,
@@ -1580,6 +1603,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'  <tr><td>Phantom id</td><td>{self.phantom.id}</td></tr>\n'
       f'  <tr><td>Central divot id</td><td>{self.phantom.centralDivot}</td></tr>\n'
       f'  <tr><td>Point acquisition</td><td>{pointAcquiMode}</td></tr>\n'
+      f'  <tr><td>Recalib at each location</td><td>{self.recalibAtLocation}</td></tr>\n'
       f'</table>\n'
       f'\n'
       f'<h3>Single Point Accuracy and Precision Test</h3>\n'

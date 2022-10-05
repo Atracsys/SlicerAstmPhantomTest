@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>368</width>
-    <height>434</height>
+    <height>475</height>
    </rect>
   </property>
   <layout class="QVBoxLayout" name="vLayoutMain">
@@ -230,7 +230,7 @@
           </property>
          </widget>
         </item>
-        <item row="9" column="0">
+        <item row="11" column="0">
          <widget class="QPushButton" name="resCamButton">
           <property name="enabled">
            <bool>true</bool>
@@ -240,14 +240,14 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="1">
+        <item row="6" column="1">
          <widget class="QLineEdit" name="operatorLineEdit">
           <property name="enabled">
            <bool>false</bool>
           </property>
          </widget>
         </item>
-        <item row="8" column="1">
+        <item row="10" column="1">
          <layout class="QHBoxLayout" name="movingTolLayout">
           <item>
            <widget class="QLabel" name="movingTolValue">
@@ -268,35 +268,35 @@
           </item>
          </layout>
         </item>
-        <item row="8" column="0">
+        <item row="10" column="0">
          <widget class="QLabel" name="movingTolLabel">
           <property name="text">
            <string>Moving tolerance</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
+        <item row="6" column="0">
          <widget class="QLabel" name="operatorLabel">
           <property name="text">
            <string>Operator</string>
           </property>
          </widget>
         </item>
-        <item row="7" column="0">
+        <item row="9" column="0">
          <widget class="QLabel" name="testsLabel">
           <property name="text">
            <string>Tests</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
+        <item row="8" column="0">
          <widget class="QLabel" name="locationsLabel">
           <property name="text">
            <string>Locations</string>
           </property>
          </widget>
         </item>
-        <item row="7" column="1">
+        <item row="9" column="1">
          <layout class="QHBoxLayout" name="testsLayout">
           <item>
            <widget class="QCheckBox" name="testCheckBox1">
@@ -365,7 +365,7 @@
           </item>
          </layout>
         </item>
-        <item row="6" column="1">
+        <item row="8" column="1">
          <layout class="QHBoxLayout" name="locationsLayout">
           <item>
            <widget class="QCheckBox" name="locCheckBoxCL">
@@ -542,6 +542,26 @@
            </spacer>
           </item>
          </layout>
+        </item>
+        <item row="5" column="1">
+         <widget class="QCheckBox" name="recalibOptionCheckBox">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Recalibrate at each location</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="calibLabel">
+          <property name="text">
+           <string>Calibration</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>

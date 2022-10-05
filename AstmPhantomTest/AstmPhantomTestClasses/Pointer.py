@@ -45,7 +45,7 @@ class Pointer(vtk.vtkObject):
     self.coordAccumulator = np.array([])  # stores all incoming coordinates during acquisition
     self.numFrames = 30  # number of successive frames considered in the acquisition of a single point
     self.timer = qt.QTimer()
-    self.timerDuration = 0
+    self.timerDuration = 1000 # ms, by default 1 second
     self.timer.setInterval(50)  # timer ticks every 50 ms
     self.timer.connect('timeout()', self.staticTimerCallback)
     # tilt

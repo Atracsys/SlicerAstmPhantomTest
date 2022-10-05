@@ -94,11 +94,12 @@ class WorkingVolume(vtk.vtkObject):
       self.actorFront.edges.GetProperty().SetColor(1,0,0.8)
       self.renFront.AddActor(self.actorFront)
       self.renFront.AddActor(self.actorFront.edges)
+      self.calibTransfoNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLLinearTransformNode', 'simpPhantCalibTransfo')
 
     self.__mat = vtk.vtkMatrix4x4()
     self.pq = PosQueue(20)  # queue to continuously store the last 20 pointer positions
     self.obsId = None
-    self.transfoNode = None
+    self.refTransfoNode = None
     self.moving = False
     self.offset = np.array([0,0,0])
     self.movedEvent = vtk.vtkCommand.UserEvent + 1
@@ -122,10 +123,11 @@ class WorkingVolume(vtk.vtkObject):
       self.simpPhantomModel.SetName('SimpPhantomModel')
       self.simpPhantomModel.GetDisplayNode().SetColor(0,0.8,1.0)
 
-  def setTransfoNode(self, tNode):
-    self.transfoNode = tNode
+  def setTransfoNode(self, refTransfoNode):
+    self.refTransfoNode = refTransfoNode
     if self.rendering:
-      self.simpPhantomModel.SetAndObserveTransformNodeID(self.transfoNode.GetID())
+      self.simpPhantomModel.SetAndObserveTransformNodeID(self.calibTransfoNode.GetID())
+      self.calibTransfoNode.SetAndObserveTransformNodeID(self.refTransfoNode.GetID())
 
   def watchTransfoNode(self, tof = True):
     if self.rendering:
@@ -270,8 +272,8 @@ class WorkingVolume(vtk.vtkObject):
 
   # returns the position of the simp phantom from its transform matrix
   def simpPhantPos(self):
-    if self.transfoNode:
-      self.transfoNode.GetMatrixTransformToParent(self.__mat)
+    if self.refTransfoNode:
+      self.refTransfoNode.GetMatrixTransformToParent(self.__mat)
       return np.array([self.__mat.GetElement(0,3), self.__mat.GetElement(1,3),
         self.__mat.GetElement(2,3)])
     else:
@@ -279,8 +281,8 @@ class WorkingVolume(vtk.vtkObject):
 
   # returns the position of the simp phantom with the offset
   def simpPhantPosWithOffset(self):
-    if self.transfoNode:
-      self.transfoNode.GetMatrixTransformToParent(self.__mat)
+    if self.refTransfoNode:
+      self.refTransfoNode.GetMatrixTransformToParent(self.__mat)
       pos = self.__mat.MultiplyDoublePoint(np.append(self.offset, 1.0)) # return a tuple
       return list(pos[0:3])
     else:

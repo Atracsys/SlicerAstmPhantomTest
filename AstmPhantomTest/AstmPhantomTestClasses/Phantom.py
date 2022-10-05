@@ -23,6 +23,7 @@ class Phantom(vtk.vtkObject):
     self.transfoNode = None
     self.calibStartedEvent = vtk.vtkCommand.UserEvent + 1
     self.calibratedEvent = vtk.vtkCommand.UserEvent + 2
+    self.firstCalibratedEvent = vtk.vtkCommand.UserEvent + 3
 
     # Detects if a transfo node with the same name is already present
     prevTransfoNode = slicer.mrmlScene.GetFirstNodeByName('phantCalibTransfo')
@@ -31,19 +32,18 @@ class Phantom(vtk.vtkObject):
       slicer.mrmlScene.RemoveNode(prevTransfoNode)
     # Create the transfo node
     self.calibTransfoNode = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLLinearTransformNode', 'phantCalibTransfo')
-    self.lblO = None
-    self.lblX = None
-    self.lblY = None
+    self.calibLabels = None
     self.gtPts = None  # divot coordinates as given by the geometry file, used only for distance measuring
     self.seq = None # sequence of divots for the distance test
     self.calGtPts = {} # divot coordinates after calibration, can be used both for distance and visualization
+    self.allCalGtPts = {} # stores the calibrations for each location
     self.calibrated = False
+    self.firstCalibration = True
 
   def resetCalib(self):
     # divot coordinates after calibration, can be used both for distance and visualization
     self.calGtPts = {}
     self.calibrated = False
-    self.readModel()
 
   def readModel(self):
     # check that models folder is defined
@@ -71,6 +71,7 @@ class Phantom(vtk.vtkObject):
     self.model.SetName('PhantomModel')
     self.model.GetDisplayNode().SetColor(0,0.8,1.0)
     self.model.GetDisplayNode().VisibilityOff()
+    self.model.SetAndObserveTransformNodeID(self.calibTransfoNode.GetID())
     return True
 
   def readGroundTruthFile(self, path):
@@ -93,15 +94,13 @@ class Phantom(vtk.vtkObject):
           self.modelId = ss[1].replace(" ", "").replace("\n","") # store model id without space and new line chars
         elif l.startswith("REF"):
           ref = ss[1].split()
-          if len(ref) != 3:
-            msg = "Ground truth file must have 3 referential labels (REF)"
+          if len(ref) < 3:
+            msg = "Ground truth file must have at least 3 referential labels (REF)"
             logging.error(msg)
             slicer.util.errorDisplay(msg)
             return False
           else:
-            self.lblO = int(ref[0])
-            self.lblX = int(ref[1])
-            self.lblY = int(ref[2])
+            self.calibLabels = [int(w) for w in ref]
         elif l.startswith("SEQ"):
           seq = ss[1].split()
           self.seq = [int(w) for w in seq]
@@ -127,14 +126,19 @@ class Phantom(vtk.vtkObject):
 
     # Check the parameters
     # Referential labels
-    if not self.lblO or not self.lblX or not self.lblY:
+    if not self.calibLabels:
       msg = "Could not read referential labels (REF)"
       logging.error(msg)
       slicer.util.errorDisplay(msg)
       return False
-    for l in [self.lblO, self.lblX, self.lblY]:
+    if len(set(self.calibLabels)) < 3:
+      msg = "Too few distinct referential labels (REF), should be 3 or more."
+      logging.error(msg)
+      slicer.util.errorDisplay(msg)
+      return False
+    for l in self.calibLabels:
       if not l in self.gtPts:
-        msg = f"Referential label {l} not amongst given points (REF)"
+        msg = f"Referential label {l} not amongst phantom labels (REF)"
         logging.error(msg)
         slicer.util.errorDisplay(msg)
         return False
@@ -144,62 +148,64 @@ class Phantom(vtk.vtkObject):
     else:
       for l in self.seq:
         if not l in self.gtPts:
-          msg = f"Referential label {l} not amongst given points (REF)"
+          msg = f"Referential label {l} not amongst phantom labels (REF)"
           logging.error(msg)
           slicer.util.errorDisplay(msg)
           return False
     # Central divot
     if not self.centralDivot in self.gtPts:
-      msg = f"Central divot {self.centralDivot} not amongst given points (CTR)"
+      msg = f"Central divot {self.centralDivot} not amongst phantom labels (CTR)"
       logging.error(msg)
       slicer.util.errorDisplay(msg)
       return False
       
     logging.info("Groundtruth file read")
-    logging.info(f'  O = #{self.lblO} {self.divPos(self.lblO).tolist()}')
-    logging.info(f'  X = #{self.lblX} {self.divPos(self.lblX).tolist()}')
-    logging.info(f'  Y = #{self.lblY} {self.divPos(self.lblY).tolist()}')
+    logging.info("   ref:")
+    for l in self.calibLabels:
+      logging.info(f'      #{l} {self.gtPts[l].tolist()}')
     logging.info(f'  seq = {self.seq}')
     logging.info(f'  center = {self.centralDivot}')
     self.id = os.path.basename(path).split('.txt')[0] # retrieve filename only
     return True
 
   def divPos(self, lbl):
-    if self.calibrated and self.gtPts:
+    if self.calibrated:
       return self.calGtPts[lbl]
     elif self.gtPts:
       return self.gtPts[lbl]
     else:
       return np.array([np.nan,np.nan,np.nan])
   
+  def canBeCalibrated(self):
+    for l in self.calibLabels:
+      if not l in self.calGtPts:
+        return False
+    return True
+
   def calibrate(self):
-    # check no divot position has a NaN coordinate
-    if self.lblO in self.calGtPts and self.lblX in self.calGtPts and \
-      self.lblY in self.calGtPts:
-      logging.info("   Calibrating...")
+    logging.info(f"   Calibrating...")
 
-      ptsFrom = vtk.vtkPoints()
-      ptsFrom.InsertNextPoint(self.gtPts[self.lblO])
-      ptsFrom.InsertNextPoint(self.gtPts[self.lblX])
-      ptsFrom.InsertNextPoint(self.gtPts[self.lblY])
-      ptsTo = vtk.vtkPoints()
-      ptsTo.InsertNextPoint(self.calGtPts[self.lblO])
-      ptsTo.InsertNextPoint(self.calGtPts[self.lblX])
-      ptsTo.InsertNextPoint(self.calGtPts[self.lblY])
-      ldmkTransfo = vtk.vtkLandmarkTransform()
-      ldmkTransfo.SetSourceLandmarks(ptsFrom)
-      ldmkTransfo.SetTargetLandmarks(ptsTo)
-      ldmkTransfo.SetModeToSimilarity()
-      ldmkTransfo.Update()
-      transfoMat = ldmkTransfo.GetMatrix()
-      self.calibTransfoNode.SetMatrixTransformToParent(transfoMat)
-      
-      for k in self.gtPts:
-        p0 = self.gtPts[k]
-        p0 = np.append(p0, 1.0)  # adding 1.0 for homogeneous coords
-        p1 = transfoMat.MultiplyDoublePoint(p0) # outputs a tuple
-        self.calGtPts[k] = np.array([p1[0], p1[1], p1[2]])
+    ptsFrom = vtk.vtkPoints()
+    ptsTo = vtk.vtkPoints()
+    for l in self.calibLabels:
+      ptsFrom.InsertNextPoint(self.gtPts[l])
+      ptsTo.InsertNextPoint(self.calGtPts[l])
+    ldmkTransfo = vtk.vtkLandmarkTransform()
+    ldmkTransfo.SetSourceLandmarks(ptsFrom)
+    ldmkTransfo.SetTargetLandmarks(ptsTo)
+    ldmkTransfo.SetModeToSimilarity()
+    ldmkTransfo.Update()
+    transfoMat = ldmkTransfo.GetMatrix()
+    self.calibTransfoNode.SetMatrixTransformToParent(transfoMat)
+    
+    for k in self.gtPts:
+      p0 = self.gtPts[k]
+      p0 = np.append(p0, 1.0)  # adding 1.0 for homogeneous coords
+      p1 = transfoMat.MultiplyDoublePoint(p0) # outputs a tuple
+      self.calGtPts[k] = np.array([p1[0], p1[1], p1[2]])
 
-      self.calibrated = True
-      logging.info("   Calibration done.")
-      self.InvokeEvent(self.calibratedEvent)
+    self.calibrated = True
+    logging.info(f"   Calibration done.")
+    if self.firstCalibration:
+      self.InvokeEvent(self.firstCalibratedEvent)
+    self.InvokeEvent(self.calibratedEvent)

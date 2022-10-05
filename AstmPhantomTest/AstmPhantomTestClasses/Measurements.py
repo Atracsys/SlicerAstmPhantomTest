@@ -20,9 +20,13 @@ class SinglePointMeasurement(vtk.vtkObject):
     self.stats1Changed = vtk.vtkCommand.UserEvent + 2
     self.stats2Changed = vtk.vtkCommand.UserEvent + 3
 
+  # Set calibrated points as ground truth
+  def setGtPts(self, gtPts):
+    self.gtPts = gtPts
+
   # Reset all stored values, including overall errors and stats
   def fullReset(self, gtPts, divot = None):
-    self.gtPts = gtPts
+    self.setGtPts(gtPts)
     if divot:
       self.divot = divot
     else:
@@ -161,9 +165,13 @@ class DistMeasurement(vtk.vtkObject):
     self.stats1Changed = vtk.vtkCommand.UserEvent + 2
     self.stats2Changed = vtk.vtkCommand.UserEvent + 3
 
+  # Set calibrated points as ground truth
+  def setGtPts(self, gtPts):
+    self.gtPts = gtPts
+
   # Reset all stored values, including overall errors and stats
   def fullReset(self, gtPts, divotsToDo = None):
-    self.gtPts = gtPts
+    self.setGtPts(gtPts)
     # stores the measurements for each location
     self.measurements = {}
     self.distStats = {}
