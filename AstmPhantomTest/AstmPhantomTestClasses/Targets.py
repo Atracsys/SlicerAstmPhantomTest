@@ -156,7 +156,7 @@ class Target():
     self.lblActor.GetTextProperty().SetOpacity(1.0)
     self.lblActor.GetTextProperty().ShadowOn()
     self.lblActor.GetTextProperty().BoldOn()
-    self.lblActor.GetTextProperty().SetFontSize(18)
+    self.lblActor.GetTextProperty().SetFontSize(40)
 
   def reset(self):
     self.actor.GetProperty().SetColor(self.colorIni[:-1])

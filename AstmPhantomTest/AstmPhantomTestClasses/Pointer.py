@@ -210,7 +210,7 @@ class Pointer(vtk.vtkObject):
       # retrieve pointer position
       self.pq.push(self.pos())
       # if moved by more than the moving tolerance from last position in queue
-      if self.pq.strideMed(10,10) > 0.5:
+      if self.pq.strideMean(10,10) > self.movingTol:
         if not self.moving:
           self.moving = True
           self.InvokeEvent(self.movedEvent)
@@ -232,23 +232,25 @@ class Pointer(vtk.vtkObject):
           self.moving = False
           self.model.GetDisplayNode().SetOpacity(1.0)
           # emit event with pointer position attached to it as a string
-          self.InvokeEvent(self.stoppedEvent, str(self.pq.queue[-1].tolist()))
+          self.InvokeEvent(self.stoppedEvent, str(self.pos().tolist()))
         if self.acquiring:
           if not self.coordAccumulator.any():
-            self.coordAccumulator = np.array([self.pq.queue[-1].tolist()])  # [[]] important for stacking
+            self.coordAccumulator = np.array([self.pos().tolist()])  # [[]] important for stacking
           else:
-            self.coordAccumulator = np.append(self.coordAccumulator, [self.pq.queue[-1].tolist()], axis=0)
+            self.coordAccumulator = np.append(self.coordAccumulator, [self.pos().tolist()], axis=0)
           # if not 1-frame acquisition
           if self.acquiMode != 0:
-            prog = min(np.size(self.coordAccumulator,0)/self.numFrames, 1.0)  # estimate progression (btw 0.0 and 1.0)
+            prog = min(np.size(self.coordAccumulator,0)/(self.numFrames + self.pq.maxsz), 1.0)  # estimate progression (btw 0.0 and 1.0)
             self.InvokeEvent(self.acquiProgEvent, str(prog))
-            if np.size(self.coordAccumulator,0) == self.numFrames: # if accumulator full
+            # Testing if accumulator is full i.e. its size equals desired number of frames
+            # once the queue is removed
+            if np.size(self.coordAccumulator,0) - self.pq.maxsz == self.numFrames:
               self.acquiring = False
               self.acquiDone = True
               if self.acquiMode == 1:  # mean
-                p = np.mean(self.coordAccumulator, axis=0)
+                p = np.mean(self.coordAccumulator[:-self.pq.maxsz], axis=0)
               if self.acquiMode == 2:  # median
-                p = np.median(self.coordAccumulator, axis=0)
+                p = np.median(self.coordAccumulator[:-self.pq.maxsz], axis=0)
               self.coordAccumulator = np.array([])
               self.InvokeEvent(self.acquiDoneEvent, str(p.tolist()))
 
