@@ -14,8 +14,11 @@ from .Utils import Dist, RMS, Span, stdDist
 
 class SinglePointMeasurement(vtk.vtkObject):
 
-  def __init__(self):
+  def __init__(self, refOri = 0):
     self.acquiNumMax = 20 # some default value, but probably overwritten
+    self.refOri = refOri # 0: roll, 1: pitch, 2: yaw
+    self.__names = ["Extreme Left", "Extreme Right", "Normal"]
+    self.refOriName = self.__names[self.refOri]
     self.acquiNumChanged = vtk.vtkCommand.UserEvent + 1
     self.stats1Changed = vtk.vtkCommand.UserEvent + 2
     self.stats2Changed = vtk.vtkCommand.UserEvent + 3
@@ -43,10 +46,8 @@ class SinglePointMeasurement(vtk.vtkObject):
     self.curLoc = None
     # acquisition number
     self.acquiNum = 0
-    # average measured position, used for comparison in rotation tests.
-    # if not the single point test is not performed, the default value is
-    # that of the ground truth
-    self.avgPos = self.gtPts[self.divot]
+    # average measured position, used for comparison in rotation tests
+    self.avgPos = None
 
   def onDivDone(self, pos):
     self.acquiNum = self.acquiNum + 1
@@ -81,7 +82,7 @@ class SinglePointMeasurement(vtk.vtkObject):
     if self.acquiNum == self.acquiNumMax and len(self.measurements[self.curLoc]) > 0:
       if self.curLoc:
         self.accuracyStats[self.curLoc] = s
-      logging.info(f'¤¤¤¤¤¤ Accuracy ({s["num"]}): avg err = {s["avg err"]:.2f}, '
+      logging.info(f'¤¤¤¤¤¤ Single Point Accuracy [{self.refOriName}] ({s["num"]}): avg err = {s["avg err"]:.2f}, '
         f'max = {s["max"]:.2f} ¤¤¤¤¤¤')
 
   def __precisionStats(self, measurements):
@@ -100,7 +101,7 @@ class SinglePointMeasurement(vtk.vtkObject):
     if self.acquiNum == self.acquiNumMax and len(self.measurements[self.curLoc]) > 0:
       if self.curLoc:
         self.precisionStats[self.curLoc] = s
-      logging.info(f'¤¤¤¤¤¤ Precision ({s["num"]}): span = {s["span"]:.2f}, rms = {s["rms"]:.2f} ¤¤¤¤¤¤')
+      logging.info(f'¤¤¤¤¤¤ Single Point Precision [{self.refOriName}] ({s["num"]}): span = {s["span"]:.2f}, rms = {s["rms"]:.2f} ¤¤¤¤¤¤')
 
 #
 # Rotation Measurement class

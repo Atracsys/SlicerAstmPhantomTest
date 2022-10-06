@@ -174,6 +174,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.movingTolSlider.connect('sliderMoved(int)', self.onMovingTolSliderMoved)
       self.ui.movingTolSlider.connect('sliderReleased()', self.onMovingTolSliderReleased)
 
+      self.ui.testCheckBox1L.connect('stateChanged(int)', self.onTestCheckBox1LChanged)
+      self.ui.testCheckBox1R.connect('stateChanged(int)', self.onTestCheckBox1RChanged)
       self.ui.testCheckBox1.connect('stateChanged(int)', self.onTestCheckBox1Changed)
       self.ui.testCheckBox2.connect('stateChanged(int)', self.onTestCheckBox2Changed)
       self.ui.testCheckBox3.connect('stateChanged(int)', self.onTestCheckBox3Changed)
@@ -360,6 +362,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.locCheckBoxLL.enabled = self.ui.locCheckBoxLL.checked
     self.ui.locCheckBoxRL.enabled = self.ui.locCheckBoxRL.checked
     # Enable test checkboxes
+    self.ui.testCheckBox1L.enabled = True
+    self.ui.testCheckBox1R.enabled = True
     self.ui.testCheckBox1.enabled = True
     self.ui.testCheckBox2.enabled = True
     self.ui.testCheckBox3.enabled = True
@@ -435,6 +439,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   @vtk.calldata_type(vtk.VTK_STRING)
   def onWorkingVolumeGuidanceStarted(self, caller, event = None, calldata = None):
     self.ui.testCheckBox1.enabled = True
+    self.ui.testCheckBox1L.enabled = True
+    self.ui.testCheckBox1R.enabled = True
     self.ui.testCheckBox2.enabled = True
     self.ui.testCheckBox3.enabled = True
     self.ui.testCheckBox4.enabled = True
@@ -445,18 +451,24 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     test = calldata
     if test in self.logic.testsToDo: # check but should always be true
       if test == self.logic.tests[0][0]:
+        self.ui.testCheckBox1L.enabled = False
+        self.ui.testCheckBox1L.setStyleSheet("#testCheckBox1L { background-color: rgba(0,255,0,30%); }")
+      if test == self.logic.tests[1][0]:
+        self.ui.testCheckBox1R.enabled = False
+        self.ui.testCheckBox1R.setStyleSheet("#testCheckBox1R { background-color: rgba(0,255,0,30%); }")
+      if test == self.logic.tests[2][0]:
         self.ui.testCheckBox1.enabled = False
         self.ui.testCheckBox1.setStyleSheet("#testCheckBox1 { background-color: rgba(0,255,0,30%); }")
-      if test == self.logic.tests[1][0]:
+      if test == self.logic.tests[3][0]:
         self.ui.testCheckBox2.enabled = False
         self.ui.testCheckBox2.setStyleSheet("#testCheckBox2 { background-color: rgba(0,255,0,30%); }")
-      if test == self.logic.tests[2][0]:
+      if test == self.logic.tests[4][0]:
         self.ui.testCheckBox3.enabled = False
         self.ui.testCheckBox3.setStyleSheet("#testCheckBox3 { background-color: rgba(0,255,0,30%); }")
-      if test == self.logic.tests[3][0]:
+      if test == self.logic.tests[5][0]:
         self.ui.testCheckBox4.enabled = False
         self.ui.testCheckBox4.setStyleSheet("#testCheckBox4 { background-color: rgba(0,255,0,30%); }")
-      if test == self.logic.tests[4][0]:
+      if test == self.logic.tests[6][0]:
         self.ui.testCheckBox5.enabled = False
         self.ui.testCheckBox5.setStyleSheet("#testCheckBox5 { background-color: rgba(0,255,0,30%); }")
 
@@ -464,14 +476,18 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   def onTestFinished(self, caller, event, calldata):
     test = calldata
     if test == self.logic.tests[0][0]:
-      self.ui.testCheckBox1.setStyleSheet("")
+      self.ui.testCheckBox1L.setStyleSheet("")
     if test == self.logic.tests[1][0]:
-      self.ui.testCheckBox2.setStyleSheet("")
+      self.ui.testCheckBox1R.setStyleSheet("")
     if test == self.logic.tests[2][0]:
-      self.ui.testCheckBox3.setStyleSheet("")
+      self.ui.testCheckBox1.setStyleSheet("")
     if test == self.logic.tests[3][0]:
-      self.ui.testCheckBox4.setStyleSheet("")
+      self.ui.testCheckBox2.setStyleSheet("")
     if test == self.logic.tests[4][0]:
+      self.ui.testCheckBox3.setStyleSheet("")
+    if test == self.logic.tests[5][0]:
+      self.ui.testCheckBox4.setStyleSheet("")
+    if test == self.logic.tests[6][0]:
       self.ui.testCheckBox5.setStyleSheet("")
 
   @vtk.calldata_type(vtk.VTK_STRING)
@@ -481,6 +497,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.locCheckBoxTL.enabled = False
     self.ui.locCheckBoxLL.enabled = False
     self.ui.locCheckBoxRL.enabled = False
+    self.ui.testCheckBox1L.enabled = False
+    self.ui.testCheckBox1R.enabled = False
     self.ui.testCheckBox1.enabled = False
     self.ui.testCheckBox2.enabled = False
     self.ui.testCheckBox3.enabled = False
@@ -505,46 +523,62 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   @vtk.calldata_type(vtk.VTK_STRING)
   def onTestNamesUpdated(self, caller, event, calldata):
     names = ast.literal_eval(calldata)
-    self.ui.testCheckBox1.text = names[0]
-    self.ui.testCheckBox2.text = names[1]
-    self.ui.testCheckBox3.text = names[2]
-    self.ui.testCheckBox4.text = names[3]
-    self.ui.testCheckBox5.text = names[4]
+    self.ui.testCheckBox1L.text = names[0]
+    self.ui.testCheckBox1R.text = names[1]
+    self.ui.testCheckBox1.text = names[2]
+    self.ui.testCheckBox2.text = names[3]
+    self.ui.testCheckBox3.text = names[4]
+    self.ui.testCheckBox4.text = names[5]
+    self.ui.testCheckBox5.text = names[6]
 
-  def onTestCheckBox1Changed(self, val):
+  def onTestCheckBox1LChanged(self, val):
     self.logic.tests[0][1] = val
     if val and self.logic.tests[0][0] not in self.logic.testsToDo:
       self.logic.testsToDo.append(self.logic.tests[0][0])
     if not val and self.logic.tests[0][0] in self.logic.testsToDo:
       self.logic.testsToDo.remove(self.logic.tests[0][0])
   
-  def onTestCheckBox2Changed(self, val):
+  def onTestCheckBox1RChanged(self, val):
     self.logic.tests[1][1] = val
     if val and self.logic.tests[1][0] not in self.logic.testsToDo:
       self.logic.testsToDo.append(self.logic.tests[1][0])
     if not val and self.logic.tests[1][0] in self.logic.testsToDo:
       self.logic.testsToDo.remove(self.logic.tests[1][0])
   
-  def onTestCheckBox3Changed(self, val):
+  def onTestCheckBox1Changed(self, val):
     self.logic.tests[2][1] = val
     if val and self.logic.tests[2][0] not in self.logic.testsToDo:
       self.logic.testsToDo.append(self.logic.tests[2][0])
     if not val and self.logic.tests[2][0] in self.logic.testsToDo:
       self.logic.testsToDo.remove(self.logic.tests[2][0])
   
-  def onTestCheckBox4Changed(self, val):
+  def onTestCheckBox2Changed(self, val):
     self.logic.tests[3][1] = val
     if val and self.logic.tests[3][0] not in self.logic.testsToDo:
       self.logic.testsToDo.append(self.logic.tests[3][0])
     if not val and self.logic.tests[3][0] in self.logic.testsToDo:
       self.logic.testsToDo.remove(self.logic.tests[3][0])
   
-  def onTestCheckBox5Changed(self, val):
+  def onTestCheckBox3Changed(self, val):
     self.logic.tests[4][1] = val
     if val and self.logic.tests[4][0] not in self.logic.testsToDo:
       self.logic.testsToDo.append(self.logic.tests[4][0])
     if not val and self.logic.tests[4][0] in self.logic.testsToDo:
       self.logic.testsToDo.remove(self.logic.tests[4][0])
+  
+  def onTestCheckBox4Changed(self, val):
+    self.logic.tests[5][1] = val
+    if val and self.logic.tests[5][0] not in self.logic.testsToDo:
+      self.logic.testsToDo.append(self.logic.tests[5][0])
+    if not val and self.logic.tests[5][0] in self.logic.testsToDo:
+      self.logic.testsToDo.remove(self.logic.tests[5][0])
+  
+  def onTestCheckBox5Changed(self, val):
+    self.logic.tests[6][1] = val
+    if val and self.logic.tests[6][0] not in self.logic.testsToDo:
+      self.logic.testsToDo.append(self.logic.tests[6][0])
+    if not val and self.logic.tests[6][0] in self.logic.testsToDo:
+      self.logic.testsToDo.remove(self.logic.tests[6][0])
   
   def onLocCheckBoxCLChanged(self, val):
     if val:
@@ -867,8 +901,9 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.tests = [[]] # initialization
     self.testsToDo = []
     # Create all the tests (even if they might not be used)
-    #   Single point accuracy and precision test
-    self.singlePointMeasurement = SinglePointMeasurement()
+    #   Single point accuracy and precision tests
+    #   (0 = extreme left, 1 = extreme right, 2 = normal)
+    self.singlePointMeasurements = [SinglePointMeasurement(0), SinglePointMeasurement(1), SinglePointMeasurement(2)]
     self.singleAnn = None
     #   Precision during rotation tests (0 = roll, 1 = pitch, 2 = yaw)
     self.rotMeasurements = [RotationMeasurement(0), RotationMeasurement(1), RotationMeasurement(2)]
@@ -914,7 +949,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.pointer.AddObserver(self.pointer.acquiDoneOutEvent, self.targets.onTargetDoneOut)
 
     # This list stores the tests order and if they are enabled
-    self.tests = [['single',1], ['yaw',1], ['pitch',1], ['roll',1], ['dist',1]]
+    self.tests = [['singleL',1], ['singleR',1], ['single',1], ['yaw',1], ['pitch',1], ['roll',1], ['dist',1]]
     self.InvokeEvent(self.testNamesUpdated, str([t[0] for t in self.tests]))
 
     # make sure the correct scene is rendered
@@ -1119,8 +1154,9 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.workingVolume.calibTransfoNode.CopyContent(self.phantom.calibTransfoNode)
 
       if self.phantom.firstCalibration:
-        if self.singlePointMeasurement:
-          self.singlePointMeasurement.fullReset(self.phantom.calGtPts, self.phantom.centralDivot)
+        if self.singlePointMeasurements:
+          for spm in self.singlePointMeasurements:
+            spm.fullReset(self.phantom.calGtPts, self.phantom.centralDivot)
         if self.distMeasurement:
           self.distMeasurement.fullReset(self.phantom.calGtPts, self.phantom.seq)
         # but also reset rotation measurements then
@@ -1131,8 +1167,9 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         self.startWorkingVolumeGuidance()
       else:
         # new calib => new calibrated ground truth for the accuracy measurements
-        if self.singlePointMeasurement:
-          self.singlePointMeasurement.setGtPts(self.phantom.calGtPts)
+        if self.singlePointMeasurements:
+          for spm in self.singlePointMeasurements:
+            spm.setGtPts(self.phantom.calGtPts)
         if self.distMeasurement:
           self.distMeasurement.setGtPts(self.phantom.calGtPts)
 
@@ -1200,6 +1237,14 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     for t in self.tests:
       if t[1]:
         self.testsToDo.append(t[0])
+    # Reset tests
+    self.singlePointMeasurements[0].reset()
+    self.singlePointMeasurements[1].reset()
+    self.singlePointMeasurements[2].reset()
+    self.rotMeasurements[0].reset()
+    self.rotMeasurements[1].reset()
+    self.rotMeasurements[2].reset()
+    self.distMeasurement.reset(self.phantom.seq)
     self.startNextTest()
 
   def startNextTest(self):
@@ -1209,8 +1254,12 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     else:
       self.pointer.model.GetDisplayNode().VisibilityOn()
       self.InvokeEvent(self.testStarted, self.testsToDo[0])
+      if self.testsToDo[0] == 'singleL':
+        self.startSinglePtTest(0)
+      if self.testsToDo[0] == 'singleR':
+        self.startSinglePtTest(1)
       if self.testsToDo[0] == 'single':
-        self.startSinglePtTest()
+        self.startSinglePtTest(2)
       if self.testsToDo[0] == 'roll':
         self.startRotationTest(0)
       if self.testsToDo[0] == 'pitch':
@@ -1221,11 +1270,13 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         self.startDistTest()
 
   # ---------------------------- Single Point Test -----------------------------
-  def startSinglePtTest(self):
-    logging.info(f'***** [{self.curLoc}] Single Point Test Start *****')
-    self.singlePointMeasurement.acquiNumMax = 20
-    self.singlePointMeasurement.curLoc = self.curLoc
-    self.singlePointMeasurement.measurements[self.curLoc] = np.empty((0,3), float)
+  def startSinglePtTest(self, i):
+    self.curSingMeas = self.singlePointMeasurements[i]
+    logging.info(f'***** [{self.curLoc}] Single Point Test Start [{self.curSingMeas.refOriName}]*****')
+    self.curSingMeas.curLoc = self.curLoc # assign current location
+    self.curSingMeas.acquiNumMax = 20
+    # Initialize measurements at this location
+    self.curSingMeas.measurements[self.curLoc] = np.empty((0,3), float)
     if not self.singleAnn:
       self.singleAnn = vtk.vtkCornerAnnotation()
       self.singleAnn.GetTextProperty().SetFontSize(180)
@@ -1234,21 +1285,21 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.singleAnn.GetTextProperty().BoldOn()
       self.singleAnn.GetTextProperty().ShadowOn()
     self.mainRenderer.AddActor(self.singleAnn)
-    self.resetCam()
 
     self.targets.proxiDetect = True
     self.test1Obs1 = self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startAcquiring)
     self.test1Obs2 = self.targets.AddObserver(self.targets.targetDoneEvent, self.onSingPtMeasTargetDone)
     self.test1Obs3 = self.targets.AddObserver(self.targets.targetDoneOutEvent, self.onSingPtMeasTargetDoneOut)
 
-    self.singleAnn.SetText(3, str(self.singlePointMeasurement.acquiNum)
-        + "/" + str(self.singlePointMeasurement.acquiNumMax)) # 3 = top right
+    annTxt = f'{self.curSingMeas.refOriName}\n{self.curSingMeas.acquiNum}/{self.curSingMeas.acquiNumMax}'
+    self.singleAnn.SetText(3, annTxt) # 3 = top right
     self.singPtMeasNext()
+    self.resetCam()
 
   def singPtMeasNext(self):
-    if self.singlePointMeasurement.acquiNum < self.singlePointMeasurement.acquiNumMax:
-      gtpos = self.phantom.divPos(self.singlePointMeasurement.divot)
-      self.targets.addTarget(self.singlePointMeasurement.divot, gtpos, True)
+    if self.curSingMeas.acquiNum < self.curSingMeas.acquiNumMax:
+      gtpos = self.phantom.divPos(self.curSingMeas.divot)
+      self.targets.addTarget(self.curSingMeas.divot, gtpos, True)
     else:
       # play sound
       self.sounds["done"].play()
@@ -1260,15 +1311,15 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     lblHit = int(cd[0])
     pos = np.array(cd[1:4])
     if lblHit == self.phantom.centralDivot:  # just a verification
-      self.singlePointMeasurement.onDivDone(pos)
+      self.curSingMeas.onDivDone(pos)
       # play sound
       self.sounds["plop"].play()
-      self.singleAnn.SetText(3, str(self.singlePointMeasurement.acquiNum)
-        + "/" + str(self.singlePointMeasurement.acquiNumMax)) # 3 = top right
+      annTxt = f'{self.curSingMeas.refOriName}\n{self.curSingMeas.acquiNum}/{self.curSingMeas.acquiNumMax}'
+      self.singleAnn.SetText(3, annTxt) # 3 = top right
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onSingPtMeasTargetDoneOut(self, caller, event, calldata):
-    self.targets.removeTarget(self.singlePointMeasurement.divot)
+    self.targets.removeTarget(self.curSingMeas.divot)
     # display the next divot
     self.singPtMeasNext()
 
@@ -1281,11 +1332,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.RemoveObserver(self.test1Obs1)
     self.targets.RemoveObserver(self.test1Obs2)
     self.targets.RemoveObserver(self.test1Obs3)
-    # Forward measured average position to rotation tests
-    for m in self.rotMeasurements:
-      m.basePos = self.singlePointMeasurement.avgPos
-    # Reset
-    self.singlePointMeasurement.reset()
+    # Go to next test
     self.InvokeEvent(self.testFinished, self.testsToDo[0])
     self.testsToDo.pop(0) # remove the test
     self.startNextTest()
@@ -1297,11 +1344,16 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.curRotAxisName = self.curRotMeas.rotAxisName
     logging.info(f'***** [{self.curLoc}] {self.curRotAxisName} Rotation Test Start *****')
     self.curRotMeas.curLoc = self.curLoc # assign current location
+    # Initialize measurements at this location
     self.curRotMeas.measurements[self.curLoc] = np.empty((0,4), float)
-    # if base position not defined by Single Point Test, use our best estimate of
-    # it, which comes from the calibration
-    if self.curRotMeas.basePos is None:
+    # if base position not defined by Single Point Test (with normal orientation),
+    # use our other best estimate of it, which comes from the calibration
+    if self.singlePointMeasurements[2].avgPos is not None:
+      self.curRotMeas.basePos = self.singlePointMeasurements[2].avgPos
+      logging.info(f'Using average position from Single Point Test [{self.singlePointMeasurements[2].refOriName}] ({self.curRotMeas.basePos}) as our base position')
+    else:
       self.curRotMeas.basePos = self.phantom.calGtPts[self.phantom.centralDivot]
+      logging.info(f'Using calibrated central divot ({self.curRotMeas.basePos}) as our base position')
     if not self.angleAnn:
       self.angleAnn = vtk.vtkCornerAnnotation()
       self.angleAnn.GetTextProperty().SetFontSize(180)
@@ -1309,18 +1361,18 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.angleAnn.GetTextProperty().SetColor(1,0,0)
       self.angleAnn.GetTextProperty().BoldOn()
       self.angleAnn.GetTextProperty().ShadowOn()
-    self.angleAnn.SetText(2, "-.-") # 2 = top left
-    self.resetCam()
+    self.angleAnn.SetText(2, "-.-") # 2 = top left    
 
     self.targets.proxiDetect = True
     self.rotTestObs1 = self.targets.AddObserver(self.targets.targetHitEvent,
       self.onRotMeasTargetHit)
     self.rotTestObs2 = self.targets.AddObserver(self.targets.targetOutEvent,
       self.onRotMeasTargetOut)
-    div = self.singlePointMeasurement.divot # use same central divot as Single Point Test 
+    div = self.singlePointMeasurements[0].divot # use same central divot as Single Point Test 
     self.targets.addTarget(div, self.phantom.divPos(div), True)
 
     self.rotTestAcquiring = False
+    self.resetCam()
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onRotMeasTargetHit(self, caller, event = None, calldata = None):
@@ -1405,7 +1457,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.RemoveObserver(self.rotTestObs2)
 
     self.curRotMeas.updateStats()
-    self.curRotMeas.reset() # make it ready for next acquisition at a different location
+    # Go to next test
     self.InvokeEvent(self.testFinished, self.testsToDo[0])
     self.testsToDo.pop(0) # remove the test
     self.startNextTest()
@@ -1413,15 +1465,16 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # ---------------------------- Multi-point Test -----------------------------
   def startDistTest(self):
     logging.info(f'***** [{self.curLoc}] Multi-point Test Start *****')
-    self.resetCam()
-    self.targets.proxiDetect = True
-    self.distMeasurement.curLoc = self.curLoc
+    self.distMeasurement.curLoc = self.curLoc # assign current location
+    # Initialize measurements at this location
     self.distMeasurement.measurements[self.curLoc] = {}
-
+    # Manage targets
+    self.targets.proxiDetect = True
     self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startAcquiring)
     self.targets.AddObserver(self.targets.targetDoneEvent, self.onDistMeasTargetDone)
     self.targets.AddObserver(self.targets.targetDoneOutEvent, self.onDistMeasTargetDoneOut)
     self.distMeasNextDiv()
+    self.resetCam()
 
   def distMeasNextDiv(self):
     if len(self.distMeasurement.divotsToDo) > 0:
@@ -1459,8 +1512,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.RemoveAllObservers()
     self.targetsDone.removeAllTargets()
     self.targetsDone.RemoveAllObservers()
-    # Reset
-    self.distMeasurement.reset(self.phantom.seq)
+    # Go to next test
     self.InvokeEvent(self.testFinished, self.testsToDo[0])
     self.testsToDo.pop(0) # remove the test
     self.startNextTest()
@@ -1484,7 +1536,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     else:
       pointAcquiMode = "unknown"
 
-    if self.recalibAtLocation
+    if self.recalibAtLocation:
       recalibAtLocation_str = "Yes"
     else:
       recalibAtLocation_str = "No"
@@ -1500,7 +1552,9 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       "Point acquisition": pointAcquiMode,
       "Recalibration at each location": recalibAtLocation_str,
       "Calibrated Ground Truth": self.phantom.allCalGtPts,
-      "Single Point Measurements": self.singlePointMeasurement.measurements,
+      f"Single Point Measurements [{self.singlePointMeasurements[0].refOriName}]": self.singlePointMeasurements[0].measurements,
+      f"Single Point Measurements [{self.singlePointMeasurements[1].refOriName}]": self.singlePointMeasurements[1].measurements,
+      f"Single Point Measurements [{self.singlePointMeasurements[2].refOriName}]": self.singlePointMeasurements[2].measurements,
       f"{self.rotMeasurements[0].rotAxisName} Rotation Measurements": self.rotMeasurements[0].measurements,
       f"{self.rotMeasurements[1].rotAxisName} Rotation Measurements": self.rotMeasurements[1].measurements,
       f"{self.rotMeasurements[2].rotAxisName} Rotation Measurements": self.rotMeasurements[2].measurements,
@@ -1527,11 +1581,21 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         lst.append("-")
       return lst
 
-    sv = [lookup(self.singlePointMeasurement.accuracyStats,"num", locations),
-        lookup(self.singlePointMeasurement.accuracyStats,"avg err", locations),
-        lookup(self.singlePointMeasurement.accuracyStats,"max", locations),
-        lookup(self.singlePointMeasurement.precisionStats,"span", locations),
-        lookup(self.singlePointMeasurement.precisionStats,"rms", locations)]
+    s0v = [lookup(self.singlePointMeasurements[0].accuracyStats,"num", locations),
+        lookup(self.singlePointMeasurements[0].accuracyStats,"avg err", locations),
+        lookup(self.singlePointMeasurements[0].accuracyStats,"max", locations),
+        lookup(self.singlePointMeasurements[0].precisionStats,"span", locations),
+        lookup(self.singlePointMeasurements[0].precisionStats,"rms", locations)]
+    s1v = [lookup(self.singlePointMeasurements[1].accuracyStats,"num", locations),
+        lookup(self.singlePointMeasurements[1].accuracyStats,"avg err", locations),
+        lookup(self.singlePointMeasurements[1].accuracyStats,"max", locations),
+        lookup(self.singlePointMeasurements[1].precisionStats,"span", locations),
+        lookup(self.singlePointMeasurements[1].precisionStats,"rms", locations)]
+    s2v = [lookup(self.singlePointMeasurements[2].accuracyStats,"num", locations),
+        lookup(self.singlePointMeasurements[2].accuracyStats,"avg err", locations),
+        lookup(self.singlePointMeasurements[2].accuracyStats,"max", locations),
+        lookup(self.singlePointMeasurements[2].precisionStats,"span", locations),
+        lookup(self.singlePointMeasurements[2].precisionStats,"rms", locations)]
     r0v = [lookup(self.rotMeasurements[0].stats,"num", locations),
         lookup(self.rotMeasurements[0].stats,"rangeMin", locations),
         lookup(self.rotMeasurements[0].stats,"rangeMax", locations),
@@ -1611,22 +1675,52 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       f'For accuracy, the errors are the vectors from the corresponding reference point (central divot) to each measurement. The accuracy mean is the length of the average of these vectors. The accuracy max is the length of the longest vector.<br>\n'
       f'For precision, the maximum distance of between two measurements (span) is reported. Also, the deviations are calculated as the distances of all the measurements from their average. Calculated as such, the Root Mean Square (RMS) of the deviations equates their standard deviation and is reported.\n'
       f'<p>\n'
+      f'At each location, the single point test is to be performed with three different phantom orientations: normal, extremes to the left and to the right. The normal orientation is with the phantom rotated such that the attached reference element is optimally located by the tracker. The two extreme orientations correspond to the most extreme left and right rotations of the phantom while maintaining tracking of the attached reference element.\n'
+      f'\n'
+      f'<h4>{self.singlePointMeasurements[0].refOriName}</h4>\n'
+      f'\n'
       f'<table style="max-width: 700px;" class="hide">\n'
       f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{sv[0][0]}</td><td>{sv[0][1]}</td><td>{sv[0][2]}</td><td>{sv[0][3]}</td><td>{sv[0][4]}</td></tr>\n'
+      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{s0v[0][0]}</td><td>{s0v[0][1]}</td><td>{s0v[0][2]}</td><td>{s0v[0][3]}</td><td>{s0v[0][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
-      f'      <td>Mean</td><td><b>{sv[1][0]}</td><td>{sv[1][1]}</td><td>{sv[1][2]}</td><td>{sv[1][3]}</td><td>{sv[1][4]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{sv[2][0]}</td><td>{sv[2][1]}</td><td>{sv[2][2]}</td><td>{sv[2][3]}</td><td>{sv[2][4]}</td></tr>\n'
+      f'      <td>Mean</td><td><b>{s0v[1][0]}</td><td>{s0v[1][1]}</td><td>{s0v[1][2]}</td><td>{s0v[1][3]}</td><td>{s0v[1][4]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{s0v[2][0]}</td><td>{s0v[2][1]}</td><td>{s0v[2][2]}</td><td>{s0v[2][3]}</td><td>{s0v[2][4]}</td></tr>\n'
       f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{sv[3][0]}</td><td>{sv[3][1]}</td><td>{sv[3][2]}</td><td>{sv[3][3]}</td><td>{sv[3][4]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{sv[4][0]}</td><td>{sv[4][1]}</td><td>{sv[4][2]}</td><td>{sv[4][3]}</td><td>{sv[4][4]}</td></tr>\n'
+      f'      <td>Span</td><td><b>{s0v[3][0]}</td><td>{s0v[3][1]}</td><td>{s0v[3][2]}</td><td>{s0v[3][3]}</td><td>{s0v[3][4]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{s0v[4][0]}</td><td>{s0v[4][1]}</td><td>{s0v[4][2]}</td><td>{s0v[4][3]}</td><td>{s0v[4][4]}</td></tr>\n'
+      f'</table>\n'
+      f'\n'
+      f'<h4>{self.singlePointMeasurements[1].refOriName}</h4>\n'
+      f'\n'
+      f'<table style="max-width: 700px;" class="hide">\n'
+      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{s1v[0][0]}</td><td>{s1v[0][1]}</td><td>{s1v[0][2]}</td><td>{s1v[0][3]}</td><td>{s1v[0][4]}</td></tr>\n'
+      f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
+      f'      <td>Mean</td><td><b>{s1v[1][0]}</td><td>{s1v[1][1]}</td><td>{s1v[1][2]}</td><td>{s1v[1][3]}</td><td>{s1v[1][4]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{s1v[2][0]}</td><td>{s1v[2][1]}</td><td>{s1v[2][2]}</td><td>{s1v[2][3]}</td><td>{s1v[2][4]}</td></tr>\n'
+      f'  <tr><td rowspan="2">Precision (mm)</td>\n'
+      f'      <td>Span</td><td><b>{s1v[3][0]}</td><td>{s1v[3][1]}</td><td>{s1v[3][2]}</td><td>{s1v[3][3]}</td><td>{s1v[3][4]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{s1v[4][0]}</td><td>{s1v[4][1]}</td><td>{s1v[4][2]}</td><td>{s1v[4][3]}</td><td>{s1v[4][4]}</td></tr>\n'
+      f'</table>\n'
+      f'\n'
+      f'<h4>{self.singlePointMeasurements[2].refOriName}</h4>\n'
+      f'\n'
+      f'<table style="max-width: 700px;" class="hide">\n'
+      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{s2v[0][0]}</td><td>{s2v[0][1]}</td><td>{s2v[0][2]}</td><td>{s2v[0][3]}</td><td>{s2v[0][4]}</td></tr>\n'
+      f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
+      f'      <td>Mean</td><td><b>{s2v[1][0]}</td><td>{s2v[1][1]}</td><td>{s2v[1][2]}</td><td>{s2v[1][3]}</td><td>{s2v[1][4]}</td></tr>\n'
+      f'  <tr><td>Max</td><td><b>{s2v[2][0]}</td><td>{s2v[2][1]}</td><td>{s2v[2][2]}</td><td>{s2v[2][3]}</td><td>{s2v[2][4]}</td></tr>\n'
+      f'  <tr><td rowspan="2">Precision (mm)</td>\n'
+      f'      <td>Span</td><td><b>{s2v[3][0]}</td><td>{s2v[3][1]}</td><td>{s2v[3][2]}</td><td>{s2v[3][3]}</td><td>{s2v[3][4]}</td></tr>\n'
+      f'  <tr><td>RMS</td><td><b>{s2v[4][0]}</td><td>{s2v[4][1]}</td><td>{s2v[4][2]}</td><td>{s2v[4][3]}</td><td>{s2v[4][4]}</td></tr>\n'
       f'</table>\n'
       f'\n'
       f'<h3>Rotation Precision Tests</h3>\n'
       f'The rotation tests measure the precision of single point acquisition under various orientations of the pointer. These orientations consists of <b>successive</b> rotations around the roll, pitch and yaw axes of the pointer.<br>\n'
       f'The measurements consist in sampling the position of the pointer every 1° during a rotation. The number of measurements is reported in the table below.<br>\n'
       f'For each rotation axis (roll, pitch, yaw), the minimum and maximum angles for which tracking is possible are reported.<br>\n'
-      f'For precision, the maximum distance of between two measurements (span) and the RMS of the deviations are reported. The deviations are calculated as the distances of each measurement from the average position previously determined in the Single Point Test. If the Single Point Test is not performed, then the ground truth position of the measured divot is used instead of the average position.\n'
+      f'For precision, the maximum distance of between two measurements (span) and the RMS of the deviations are reported. The deviations are calculated as the distances of each measurement from the average position previously determined in the Single Point Test with the normal orientation. If that Single Point Test with normal orientation was not performed, then the ground truth position of the measured divot is used instead.\n'
       f'\n'
       f'<h4>{self.rotMeasurements[0].rotAxisName} Rotation Precision Test</h4>\n'
       f'\n'
