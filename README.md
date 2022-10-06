@@ -1,6 +1,5 @@
 # ASTM Phantom Test
-This software is a module for [3D Slicer](https://www.slicer.org) to perform the accuracy test of a tracking system as described in the [standard ASTM F2554](https://www.astm.org/f2554-18.html).
-(:warning: The present procedures are based on the guidelines outlined in the upcoming revision of the standard due to late 2022).
+This software is a module for [3D Slicer](https://www.slicer.org) to perform the accuracy test of a tracking system as described in the [standard ASTM F2554](https://www.astm.org/f2554-22.html) in its latest version (2022).
 
 This test relies on a calibration object, hereafter referred to as the "phantom", of known dimensions measured by a [CMM](https://en.wikipedia.org/wiki/Coordinate-measuring_machine). Performing measurements on such a phantom provides a reliable assessment of the tracking system accuracy and precision.
 
@@ -148,7 +147,7 @@ Located in `module_path\Resources\wv`, this parameter file contains various info
 - the model name of the tracker (`MODEL`) is also given in the working volume file. The name has to match one of the models included in `module_path\Resources\models`. For example, `MODEL = ftk500` will prompt the software to load the 3D model `ftk500_RAS.stl`.
 
 ## Phantom file<a name="phantomFile"></a>
-Located in `module_path\Resources\gt`, this parameter file describes the divots on the phantom and their use. All the divots coordinates are listed (`POINT id`,`X`,`Y`,`Z`) and given **in the referential frame of the phantom**. This referential frame is defined by three divots which ids are given by `REF` in the following order O, X and Y.
+Located in `module_path\Resources\gt`, this parameter file describes the divots on the phantom and their use. All the divots coordinates are listed (`POINT id`,`X`,`Y`,`Z`) and given **in the referential frame of the phantom**. This referential frame is defined by the first three divots provided by `REF` in the following order O, X and Y.<a name="phantomCoordSystem"></a>
 
 The sequence of divots used for the multi-point test is given by `SEQ` and the id of the central divot (used for all the other tests) is given by `CTR`.
 
@@ -156,7 +155,7 @@ The sequence of divots used for the multi-point test is given by `SEQ` and the i
 REF = 1 19 18
 SEQ = 20 18 12 6 1 7 13 19 25 22 28 30 32 34 37 35 40 42 44 46
 CTR = 20
-MODEL = phantom2018
+MODEL = phantom2022
 
 POINT 1
 X 0.00
@@ -173,14 +172,14 @@ Z -0.01
 ...
 ```
 
-The model name of the phantom (`MODEL`) is also given in the parameter file. The name has to match one of the models included in `module_path\Resources\models`. For example, `MODEL = phantomV1` will prompt the software to load the 3D model `phantom2018_RAS.stl`. Two models are already included, corresponding to the last two revisions of the standard in 2018 and 2022.
+The model name of the phantom (`MODEL`) is also given in the parameter file. The name has to match one of the models included in `module_path\Resources\models`. For example, `MODEL = phantom2018` will prompt the software to load the 3D model `phantom2018_RAS.stl`. Two models are already included, corresponding to the last two revisions of the standard from 2018 and 2022.
 
 # Usage<a name="usage"></a>
 ## Setup<a name="setup"></a>
 The tracker and the phantom are set up so that:
 1. the tracker is installed according to the manufacturer's specifications (typically in orientation). Then, it is connected to the computer and turned on. For more details about this connection (e.g. cabling, network configuration, drivers), please refer to the tracker manual.
 2. the phantom is inially placed within the first half of the working volume facing the tracker.
-3. during the measurements, both the phantom and the pointer must keep their tracked array (approximately) oriented towards the tracker so as to ensure an optimal tracking accuracy. The only exception is for the pointer during the rotation tests.
+3. during most measurements, both the phantom and the pointer must keep their tracked array (approximately) oriented towards the tracker so as to ensure an optimal tracking accuracy. The only exception for the pointer is during the rotation tests. The only exception for the phantom is during the single point tests with extreme orientations.
 4. the operator can manipulate the pointer with respect to the phantom with ease, without occluding the device lines of sight. The operator should also be able to monitor the progress of the tests on the screen monitor. See example of setup below.
 5. if possible, sound should be enabled on the computer as audio clues are given to signal progression during the tests, which sometimes alleviates the need to look at the screen (especially during the multi-point test).
 
@@ -228,7 +227,7 @@ The first parameter the operator is expected to input is the tracker serial numb
 
 ![Parameter input 1](/readme_img/parameter_input1.svg)
 
-<a name="parameterSetting"></a>Once filled in, the other parameters are unlocked and the user can choose the appropriate [pointer file](#pointerFile) (2), [phantom file](#phantomFile) (3) and [working volume file](#wvFile) (4). The user also has to choose the [point acquisition mode](#ptAcquiMode) (5) and input his id in the `Operator` field (6).
+<a name="parameterSetting"></a>Once filled in, the other parameters are unlocked and the user can choose the appropriate [pointer file](#pointerFile) (2), [phantom file](#phantomFile) (3) and [working volume file](#wvFile) (4). The user may also choose the [point acquisition mode](#ptAcquiMode) (5), the recalibration option (6) and has to input his id in the `Operator` field (7).
 
 ![Parameter input 2](/readme_img/parameter_input2.svg)
 
@@ -237,25 +236,29 @@ The first parameter the operator is expected to input is the tracker serial numb
 - **mean**: the point coordinates are the *mean* of those measured across *N* frames (default is 30). In this mode, the point acquisition lasts *N* frames.
 - **median**: the point coordinates are the *median* of those measured across *N* frames (default is 30). In this mode, the point acquisition lasts *N* frames.
 
-Once the operator id is filled in, the choice in locations is unlocked (7). By default, all [five locations](#wvFile) in the working volume are enabled as recommended by the standard, but the user can, at any time during the session, to disable and skip locations if necessary. <a name="enableTests"></a>Likewise, by default all five tests are enabled (8) as recommended by the standard, but the user can disable certain tests **before** the phantom hits a target location in the working volume, if necessary.
+The option of **Recalibrate at each location** is also offered, which implies that a new calibration be performed at each selected location in the working volume. If this option is not checked, the initial calibration will be used for the remainder of the procedure. Note that, as per the standard, recalibrations are **not required but recommended**.
 
-The [moving tolerance](#movTol) slidebar (9) allows the user to monitor and adjust the sensibility to pointer motion. The operator may interact with the 3D scene with the mouse and the optimal view can be automatically reset with the `Reset Camera` button (10).
-
-![Locations & tests](/readme_img/locations_tests.svg)
-
-The filling in of operator id also triggers the phantom calibration, which determines the geometrical relationship between the coordinate system of the phantom (and thereby its divots) and the reference array attached to it. To perform the calibration, the user only needs to successively pick three separate divots that defines the referential frame (indicated in the [phantom file](#phantomFile) by `REF`).
+Filling in the operator id triggers the **initial phantom calibration**, which estimates the geometrical relationship between the coordinate system of the phantom (and thereby its divots) and the reference array attached to it. To perform the calibration, the user needs to successively pick all the divots indicated in the [phantom file](#phantomFile) by `REF` with a minimum of three divots (more can be added beyond the first three defining the [phantom coordinate system](#phantomCoordSystem)).
 
 |<a name="acquiMech"></a>For any **point acquisition**, the targets are indicated by a red sphere and their id. Once the pointer hit the target (the correct divot), the point acquisition starts, indicated by the target becoming smaller and greener. The duration of the acquisition depends on the [point acquisition mode](#ptAcquiMode). The point acquisition is done when the target becomes large and green, and a "pop" sound is played. Removing the pointer from the divot then prompts the program to show the next target, if any. Removing the pointer before the point acquisition is done will reset the current target.|
 |---|
 
 ![Calibration](/readme_img/calib.svg)
 
-Once the calibration is over, the actual tests may start but first the phantom needs to be placed at one of the designated locations in the working volume. To help the user in this task, the interface switches back to "working volume guidance". In the top and front views, the user can now see where the phantom is located with respect to the target locations. Once the phantom is stabily placed at one of the enabled locations, a specific sound is played and the first test starts.
+Once the calibration is over, the choice in locations is unlocked (8). By default, all [five locations](#wvFile) in the working volume are enabled as recommended by the standard, but the user can, at any time during the session, disable and skip undone locations if desired. <a name="enableTests"></a>Likewise, by default all seven tests are enabled (9) as recommended by the standard, but the user can disable certain tests **before** the phantom hits a target location in the working volume.
+
+The [moving tolerance](#movTol) slidebar (10) allows the user to monitor and adjust the sensibility to pointer motion. Finally, the operator may interact with the 3D scene with the mouse and the optimal view can be automatically reset with the `Reset Camera` button (11).
+
+![Locations & tests](/readme_img/locations_tests.svg)
+
+To **start the tests**, the user must first place the phantom at one of the designated locations in the working volume. To help the user in this task, the interface switches back to "working volume guidance". In the top and front views (left and right respectively), the user can now see where the phantom is located with respect to the target locations. Once the phantom is stabily placed at one of the enabled locations, a specific sound is played and the first test starts.
 
 ![Working volume guidance](/readme_img/wv_guidance.svg)
 
-### Single Point Test
+### Single Point Tests
 Referred to as the *Single Point Accuracy and Precision Test* in the ASTM standard, this test aims at assessing the performance of the tracking system for single point measurements. To do so, the user must repeatedly acquire the central divot for a certain number of times. The progression of the test is displayed in the top right corner.
+
+The single point test is to be performed with three different phantom orientations: `Extreme Left`, `Extreme Right` and `Normal`. The two extreme orientations correspond to the most extreme left and right rotations of the phantom while maintaining tracking of the attached reference element. The normal orientation is with the phantom rotated such that the attached reference element is optimally located by the tracker.
 
 ![Single point test](/readme_img/tests_single.png)
 
