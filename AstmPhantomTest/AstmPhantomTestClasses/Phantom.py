@@ -206,6 +206,6 @@ class Phantom(vtk.vtkObject):
 
     self.calibrated = True
     logging.info(f"   Calibration done.")
+    self.InvokeEvent(self.calibratedEvent)
     if self.firstCalibration:
       self.InvokeEvent(self.firstCalibratedEvent)
-    self.InvokeEvent(self.calibratedEvent)

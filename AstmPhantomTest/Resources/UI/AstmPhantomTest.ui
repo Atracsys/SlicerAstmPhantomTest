@@ -9,9 +9,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>318</width>
-    <height>504</height>
+    <width>389</width>
+    <height>503</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="maximumSize">
    <size>
@@ -22,6 +28,12 @@
   <layout class="QVBoxLayout" name="vLayoutMain">
    <item>
     <widget class="QGroupBox" name="globalGroupBox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="minimumSize">
       <size>
        <width>300</width>
@@ -240,9 +252,9 @@
          </widget>
         </item>
         <item row="11" column="0">
-         <widget class="QPushButton" name="resCamButton">
+         <widget class="QPushButton" name="resetCamButton">
           <property name="enabled">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="text">
            <string>Reset Cam</string>
@@ -515,6 +527,39 @@
            </widget>
           </item>
           <item>
+           <widget class="QLineEdit" name="pointAcquiDurationLineEdit">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="pointAcquiMillisecLabel">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>ms</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="pointAcquiVerticalLine">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QRadioButton" name="pointAcquiMeanButton">
             <property name="enabled">
              <bool>false</bool>
@@ -570,7 +615,7 @@
            </widget>
           </item>
           <item>
-           <spacer name="pointAcquiHspacer">
+           <spacer name="pointAcquiHspacer1">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -603,6 +648,52 @@
            <string>Calibration</string>
           </property>
          </widget>
+        </item>
+        <item row="11" column="1">
+         <layout class="QHBoxLayout" name="resetStepLayout">
+          <item>
+           <spacer name="resetStepHSpacer1">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="resetStepButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>200</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>Reset Step</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="resetStepHSpacer2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>

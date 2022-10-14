@@ -19,9 +19,9 @@ class SinglePointMeasurement(vtk.vtkObject):
     self.refOri = refOri # 0: roll, 1: pitch, 2: yaw
     self.__names = ["Extreme Left", "Extreme Right", "Normal"]
     self.refOriName = self.__names[self.refOri]
-    self.acquiNumChanged = vtk.vtkCommand.UserEvent + 1
-    self.stats1Changed = vtk.vtkCommand.UserEvent + 2
-    self.stats2Changed = vtk.vtkCommand.UserEvent + 3
+    self.stats1Changed = vtk.vtkCommand.UserEvent + 1
+    self.stats2Changed = vtk.vtkCommand.UserEvent + 2
+    self.curLoc = None
 
   # Set calibrated points as ground truth
   def setGtPts(self, gtPts):
@@ -29,6 +29,7 @@ class SinglePointMeasurement(vtk.vtkObject):
 
   # Reset all stored values, including overall errors and stats
   def fullReset(self, gtPts, divot = None):
+    self.curLoc = None
     self.setGtPts(gtPts)
     if divot:
       self.divot = divot
@@ -40,10 +41,13 @@ class SinglePointMeasurement(vtk.vtkObject):
     self.accuracyStats = {} # stores the accuracy stats for each location
     self.reset()
 
-  # Reset for next sequence
+  # Reset for current location
   def reset(self):
-    # reset current location
-    self.curLoc = None
+    logging.info(f'   Reset {self.refOriName} Single Point measurements for location [{self.curLoc}]')
+    if self.curLoc:
+      self.measurements[self.curLoc] = np.empty((0,3), float)
+      self.precisionStats[self.curLoc] = None
+      self.accuracyStats[self.curLoc] = None
     # acquisition number
     self.acquiNum = 0
     # average measured position, used for comparison in rotation tests
@@ -53,7 +57,6 @@ class SinglePointMeasurement(vtk.vtkObject):
     self.acquiNum = self.acquiNum + 1
     self.measurements[self.curLoc] = np.append(self.measurements[self.curLoc],
       pos.reshape(1,-1), axis=0)
-    self.InvokeEvent(self.acquiNumChanged, self.acquiNum)
     if self.acquiNum < self.acquiNumMax:
       logging.info(f"   {self.acquiNumMax - self.acquiNum} acquisition(s) left "
         f"for central divot #{self.divot}")
@@ -116,18 +119,22 @@ class RotationMeasurement(vtk.vtkObject):
     self.rotAxis = axis # 0: roll, 1: pitch, 2: yaw
     self.__names = ["Roll", "Pitch", "Yaw"]
     self.rotAxisName = self.__names[self.rotAxis]
-    self.fullReset()
+    self.curLoc = None
 
   # Reset all measurements and stats
   def fullReset(self):
+    self.curLoc = None
     # stores the measurements for each location
     self.measurements = {}
     self.stats = {}
     self.reset()
 
-  # Reset current sequence
+  # Reset for current location
   def reset(self):
-    self.curLoc = None
+    logging.info(f'   Reset {self.rotAxisName} Rotation measurements for location [{self.curLoc}]')
+    if self.curLoc:
+      self.measurements[self.curLoc] = np.empty((0,4), float)
+      self.stats[self.curLoc] = None
     # base position for precision estimation, typically the averaged position
     # measured in the Single Point Measurement
     self.basePos = None
@@ -162,9 +169,9 @@ class RotationMeasurement(vtk.vtkObject):
 class DistMeasurement(vtk.vtkObject):
 
   def __init__(self):
-    self.acquiNumChanged = vtk.vtkCommand.UserEvent + 1
-    self.stats1Changed = vtk.vtkCommand.UserEvent + 2
-    self.stats2Changed = vtk.vtkCommand.UserEvent + 3
+    self.stats1Changed = vtk.vtkCommand.UserEvent + 1
+    self.stats2Changed = vtk.vtkCommand.UserEvent + 2
+    self.curLoc = None
 
   # Set calibrated points as ground truth
   def setGtPts(self, gtPts):
@@ -172,6 +179,7 @@ class DistMeasurement(vtk.vtkObject):
 
   # Reset all stored values, including overall errors and stats
   def fullReset(self, gtPts, divotsToDo = None):
+    self.curLoc = None
     self.setGtPts(gtPts)
     # stores the measurements for each location
     self.measurements = {}
@@ -179,19 +187,23 @@ class DistMeasurement(vtk.vtkObject):
     self.regStats = {}
     self.reset(divotsToDo)
 
-  # Reset only for current sequence
+  # Reset for current location
   def reset(self, divotsToDo = None):
+    logging.info(f'   Reset Multi-point measurements for location {self.curLoc}')
     if divotsToDo:
       self.divotsToDo = divotsToDo.copy() # copy not ref
     else:
+      # if no designated divots, use all of them !
       self.divotsToDo = list(self.gtPts.keys())
-    self.curLoc = None
+    if self.curLoc:
+      self.measurements[self.curLoc] = {}
+      self.distStats[self.curLoc] = {}
+      self.regStats[self.curLoc] = {}
     self.currLbl = -1
 
   def onDivDone(self, pos):
     self.measurements[self.curLoc][self.currLbl] = pos
     self.divotsToDo.remove(self.currLbl)
-    self.InvokeEvent(self.acquiNumChanged, len(self.measurements[self.curLoc]))
     self.updateDistStats()
     self.updateRegStats()
     logging.info(f'   {len(self.divotsToDo)} divots left = {self.divotsToDo}')

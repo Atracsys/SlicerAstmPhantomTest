@@ -54,6 +54,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     Called when the user opens the module the first time and the widget is initialized.
     """
     ScriptedLoadableModuleWidget.__init__(self, parent)
+    self.developerMode = False # remove module developer buttons
     VTKObservationMixin.__init__(self)  # needed for parameter node observation
     self.logic = None
     self.waitingForAllNodes = True
@@ -169,6 +170,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.pointAcqui1frameButton.connect('clicked()', self.onPointAcqui1frameSet)
       self.ui.pointAcquiMeanButton.connect('clicked()', self.onPointAcquiMeanSet)
       self.ui.pointAcquiMedianButton.connect('clicked()', self.onPointAcquiMedianSet)
+      self.ui.pointAcquiDurationLineEdit.connect('editingFinished()', self.onPointAcquiDurationChanged)
       self.ui.pointAcquiNumFramesLineEdit.connect('editingFinished()', self.onPointAcquiNumFramesChanged)
       self.ui.operatorLineEdit.connect('editingFinished()', self.onOperatorIdChanged)
       self.ui.movingTolSlider.connect('sliderMoved(int)', self.onMovingTolSliderMoved)
@@ -186,7 +188,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.locCheckBoxTL.connect('stateChanged(int)', self.onLocCheckBoxTLChanged)
       self.ui.locCheckBoxLL.connect('stateChanged(int)', self.onLocCheckBoxLLChanged)
       self.ui.locCheckBoxRL.connect('stateChanged(int)', self.onLocCheckBoxRLChanged)
-      self.ui.resCamButton.connect('clicked()', self.logic.resetCam)
+      self.ui.resetCamButton.connect('clicked()', self.logic.resetCam)
+      self.ui.resetStepButton.connect('clicked()', self.logic.resetStep)
       self.ui.recalibOptionCheckBox.connect('stateChanged(int)', self.logic.setRecalibAtLocation)
 
       self.ui.hackCalibButton.connect('clicked()', self.hackCalib)
@@ -195,10 +198,13 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.hackTLButton.connect('clicked()', self.hackTL)
       self.ui.hackLLButton.connect('clicked()', self.hackLL)
       self.ui.hackRLButton.connect('clicked()', self.hackRL)
-      self.ui.hackXButton.connect('clicked()', self.logic.stopSinglePtTest)
+      self.ui.hackXButton.connect('clicked()', self.logic.skipTest)
 
-      self.intval = qt.QIntValidator(1,999) # input validator for point acqui line edit
-      self.ui.pointAcquiNumFramesLineEdit.setValidator(self.intval)
+      # input validators
+      self.durationValidator = qt.QIntValidator(1,10000)
+      self.ui.pointAcquiDurationLineEdit.setValidator(self.durationValidator)
+      self.numFramesValidator = qt.QIntValidator(1,999)
+      self.ui.pointAcquiNumFramesLineEdit.setValidator(self.numFramesValidator)
 
       # Add observers for custom events
       self.logic.pointer.AddObserver(self.logic.pointer.movingTolChanged,
@@ -220,6 +226,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # Initialize default values for UI elements
       self.ui.movingTolValue.setText(f'{self.logic.pointer.movingTol:.2f} mm')
       self.onMovingTolChangedFromLocation(self.logic.pointer) # update slider with pointer moving tol default value
+      self.ui.resetStepButton.setText("\u2B6F Reset Current Step")
       self.ui.hackCollapsibleButton.setText("\u26d4 dev shortcuts \u26d4")
       self.ui.hackXButton.setText("\u26a1")
 
@@ -244,11 +251,11 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       # Adding the observer watching out for the new transform node after openigtlink connection
       slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onNodeAdded)
 
-      # Adding welcome message
-      self.welcomeText = vtk.vtkCornerAnnotation()
-      self.welcomeText.GetTextProperty().SetFontSize(200)
-      self.welcomeText.SetText(2, "Welcome to the ASTM Phantom Test module.\nTo start, make sure that both the pointer and\nthe reference array attached to the phantom\nare visible by the tracker.\n<--")
-      self.logic.mainRenderer.AddActor(self.welcomeText)
+      # Welcome message
+      self.messageActor = vtk.vtkCornerAnnotation()
+      self.messageActor.GetTextProperty().SetFontSize(200)
+      self.messageActor.SetText(2, "Welcome to the ASTM Phantom Test module.\nTo start, make sure that both the pointer and\nthe reference array attached to the phantom\nare visible by the tracker.\n<--")
+      self.logic.mainRenderer.AddActor(self.messageActor)
 
       # Test if OpenIGTLink connection already open
       testNode = slicer.mrmlScene.GetFirstNodeByName('PointerConnector')
@@ -340,15 +347,17 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.workingVolumeFileSelector.enabled = False
     self.ui.groundTruthFileSelector.enabled = False
     self.ui.pointAcqui1frameButton.enabled = False
+    self.ui.pointAcquiDurationLineEdit.enabled = False
+    self.ui.pointAcquiMillisecLabel.enabled = False
+    self.ui.pointAcquiVerticalLine.enabled = False
     self.ui.pointAcquiMeanButton.enabled = False
     self.ui.pointAcquiMedianButton.enabled = False
     self.ui.pointAcquiNumFramesLineEdit.enabled = False
     self.ui.pointAcquiFramesLabel.enabled = False
+    self.ui.hackCalibButton.enabled = True
 
-    self.calibratingText = vtk.vtkCornerAnnotation()
-    self.calibratingText.GetTextProperty().SetFontSize(200)
-    self.calibratingText.SetText(2, "Phantom registration:\nPick the target divot with the pointer")
-    self.logic.mainRenderer.AddActor(self.calibratingText)
+    self.messageActor.SetText(2, "Phantom calibration:\nPick the target divot with the pointer")
+    self.logic.mainRenderer.AddActor(self.messageActor)
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onPhantomFirstCalibrated(self, caller, event = None, calldata = None):
@@ -379,7 +388,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     Called when the phantom is calibrated
     """
-    self.logic.mainRenderer.RemoveActor(self.calibratingText)
+    self.ui.hackCalibButton.enabled = False
+    self.logic.mainRenderer.RemoveActor(self.messageActor)
     # Update moving tolerance
     self.onMovingTolChangedFromLocation(self.logic.phantom)
 
@@ -512,13 +522,11 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.hackRLButton.enabled = False
     self.ui.recalibOptionCheckBox.enabled = False
     # Display message for session end
-    self.endText = vtk.vtkCornerAnnotation()
-    self.endText.GetTextProperty().SetFontSize(200)
-    self.endText.SetLinearFontScaleFactor(8)
-    self.endText.GetTextProperty().SetColor(0,1,0)
-    self.endText.GetTextProperty().BoldOn()
-    self.endText.SetText(2, "Session done !")
-    self.logic.topWVRenderer.AddActor(self.endText)
+    self.messageActor.GetTextProperty().SetColor(0,1,0)
+    self.messageActor.GetTextProperty().BoldOn()
+    self.messageActor.SetLinearFontScaleFactor(8)
+    self.messageActor.SetText(2, "Session done !")
+    self.logic.topWVRenderer.AddActor(self.messageActor)
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onTestNamesUpdated(self, caller, event, calldata):
@@ -632,6 +640,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.hackCollapsibleButton.collapsed = False
         self.ui.hackCollapsibleButton.enabled = True
         self.ui.hackCalibButton.enabled = True
+        self.ui.resetCamButton.enabled = True
+        self.ui.resetStepButton.enabled = True
         self.ui.hackCLButton.enabled = self.ui.locCheckBoxCL.checked
         self.ui.hackBLButton.enabled = self.ui.locCheckBoxBL.checked
         self.ui.hackTLButton.enabled = self.ui.locCheckBoxTL.checked
@@ -655,8 +665,12 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.groundTruthFileSelector.enabled = True
         # Enable point acquisition parametrization
         self.ui.pointAcqui1frameButton.enabled = True
+        self.ui.pointAcquiDurationLineEdit.enabled = True
+        self.ui.pointAcquiMillisecLabel.enabled = True
+        self.ui.pointAcquiVerticalLine.enabled = True
         self.ui.pointAcquiMeanButton.enabled = True
         self.ui.pointAcquiMedianButton.enabled = True
+        self.ui.pointAcquiDurationLineEdit.text = str(self.logic.pointer.timerDuration)
         self.ui.pointAcquiNumFramesLineEdit.text = str(self.logic.pointer.numFrames)
         # Enable other options
         self.ui.operatorLineEdit.enabled = True
@@ -666,23 +680,34 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     logging.info(f"Tracker Serial Number: {self.logic.trackerId}")
 
   def onPointAcqui1frameSet(self):
+    self.ui.pointAcquiDurationLineEdit.enabled = True
+    self.ui.pointAcquiMillisecLabel.enabled = True
     self.ui.pointAcquiNumFramesLineEdit.enabled = False
     self.ui.pointAcquiFramesLabel.enabled = False
     self.logic.pointer.acquiMode = 0
-    self.logic.pointer.timerDuration = 500  # ms
-    logging.info("Point acquisition set to 1-frame")
+    logging.info(f"Point acquisition set to 1-frame from a {self.logic.pointer.timerDuration}ms point acquisition")
   
   def onPointAcquiMeanSet(self):
+    self.ui.pointAcquiDurationLineEdit.enabled = False
+    self.ui.pointAcquiMillisecLabel.enabled = False
     self.ui.pointAcquiNumFramesLineEdit.enabled = True
     self.ui.pointAcquiFramesLabel.enabled = True
     self.logic.pointer.acquiMode = 1
     logging.info(f"Point acquisition set to MEAN across {self.logic.pointer.numFrames} frames")
 
   def onPointAcquiMedianSet(self):
+    self.ui.pointAcquiDurationLineEdit.enabled = False
+    self.ui.pointAcquiMillisecLabel.enabled = False
     self.ui.pointAcquiNumFramesLineEdit.enabled = True
     self.ui.pointAcquiFramesLabel.enabled = True
     self.logic.pointer.acquiMode = 2
     logging.info(f"Point acquisition set to MEDIAN across {self.logic.pointer.numFrames} frames")
+
+  def onPointAcquiDurationChanged(self):
+    val = int(self.ui.pointAcquiDurationLineEdit.text)
+    if val != self.logic.pointer.timerDuration:
+      self.logic.pointer.timerDuration = val
+      logging.info(f"Timer duration for point acquisition set to {self.logic.pointer.timerDuration}ms")
 
   def onPointAcquiNumFramesChanged(self):
     val = int(self.ui.pointAcquiNumFramesLineEdit.text)
@@ -750,7 +775,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ptrRefNode.GetAttribute("TransformStatus") == "OK":
         self.waitingForAllNodes = False
         logging.info('onNodeChanged: all required transform nodes are valid, let\'s process!')
-        self.logic.mainRenderer.RemoveActor(self.welcomeText)
+        self.logic.mainRenderer.RemoveActor(self.messageActor)
         self.ui.trackerLineEdit.enabled = True
         self.ui.trackerLineEdit.setFocus()
         # Selectors call since combobox already selected first item in each
@@ -897,9 +922,11 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.wvTargetsTop = Targets(self.workingVolume.renTop)
     self.wvTargetsFront = Targets(self.workingVolume.renFront)
     self.curLoc = "INIT" # null location in the working volume
+    self.wvGuidanceActive = False
     # Tests
     self.tests = [[]] # initialization
     self.testsToDo = []
+    self.runningTest = False
     # Create all the tests (even if they might not be used)
     #   Single point accuracy and precision tests
     #   (0 = extreme left, 1 = extreme right, 2 = normal)
@@ -976,6 +1003,22 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         self.placeCamWrtPhantom(False)
     elif self.topWVWidget.isVisible() and self.frontWVWidget.isVisible():
       self.workingVolume.resetCameras()
+
+  def resetStep(self):
+    if not self.wvGuidanceActive:
+      self.resetStepMsgBox = qt.QMessageBox()
+      self.resetStepMsgBox.setText("Reset current step ?")
+      self.resetStepMsgBox.setIcon(qt.QMessageBox().Warning)
+      self.resetStepMsgBox.setStandardButtons(qt.QMessageBox().Yes | qt.QMessageBox().No)
+      self.resetStepMsgBox.setDefaultButton(qt.QMessageBox().No)
+      ret = self.resetStepMsgBox.exec()
+      if ret == qt.QMessageBox().Yes:
+        logging.info("***** Reset current step *****")
+        if self.calibratingPhantom:
+          self.restartPhantomCalibration()
+        if self.runningTest:
+          self.stopCurrentTest()
+          self.startCurrentTest()
 
   def setRecalibAtLocation(self, val):
     self.recalibAtLocation = val
@@ -1071,8 +1114,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # --------------------- Calibration ---------------------
   def startPhantomCalibration(self):
     logging.info('Calibration started')
-    # initialize calibrated points for the current location
-    self.phantom.calGtPts = {}
+    # reset phantom calib transfo
     identityMat = vtk.vtkMatrix4x4()
     self.phantom.calibTransfoNode.SetMatrixTransformToParent(identityMat)
     # make sure the correct scene is rendered
@@ -1081,8 +1123,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.topWVWidget.hide()
       self.frontWVWidget.hide()
     # if the phantom was already calibrated
-    if self.phantom.calibrated:
-      self.phantom.resetCalib()
+    if self.phantom.calibrated or len(self.phantom.calGtPts) > 0: # should be the same
+      self.phantom.resetCalib() # initialize calibrated points for the current location
       self.pointer.model.GetDisplayNode().VisibilityOff()
     self.phantom.model.GetDisplayNode().VisibilityOn()
 
@@ -1128,7 +1170,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       cd = [cd]
     if cd[0] in self.phantom.calibLabels:
       self.phantom.calGtPts[cd[0]] = np.array(cd[1:4])
-      logging.info(f'   Divot #{cd[0]} calibrated at {cd[1:4]}')
+      logging.info(f'   Divot #{cd[0]} calibrated at {np.around(cd[1:4],2).tolist()}')
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onCalibrationPointDoneOut(self, caller, event, calldata):
@@ -1138,46 +1180,57 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.removeTarget(cd[0])
 
     if self.phantom.canBeCalibrated():
-      self.phantom.calibrate()
-      slicer.app.processEvents() # make sure that
-      self.phantom.allCalGtPts[self.curLoc] = self.phantom.calGtPts
-      self.calibratingPhantom = False
+      self.stopPhantomCalibration()
+      self.finishPhantomCalibration()
+  
+  def stopPhantomCalibration(self):
+    self.targets.RemoveObserver(self.calibObs1)
+    self.targets.RemoveObserver(self.calibObs2)
+    self.targets.RemoveObserver(self.calibObs3)
+    self.calibratingPhantom = False
 
-      self.targets.RemoveObserver(self.calibObs1)
-      self.targets.RemoveObserver(self.calibObs2)
-      self.targets.RemoveObserver(self.calibObs3)
+  def restartPhantomCalibration(self):
+    self.stopPhantomCalibration()
+    self.startPhantomCalibration()
 
-      # Add offset to simp phantom position (in ref marker referential!)
-      # so that the central divot hits the wv targets
-      self.workingVolume.offset = self.phantom.calGtPts[self.phantom.centralDivot]
-      # Update the calibration transform of simp phantom with the one from phantom
-      self.workingVolume.calibTransfoNode.CopyContent(self.phantom.calibTransfoNode)
+  def finishPhantomCalibration(self):
+    self.phantom.calibrate()
+    slicer.app.processEvents() # make sure that
+    self.phantom.allCalGtPts[self.curLoc] = self.phantom.calGtPts
+    # Add offset to simp phantom position (in ref marker referential!)
+    # so that the central divot hits the wv targets
+    self.workingVolume.offset = self.phantom.calGtPts[self.phantom.centralDivot]
+    # Update the calibration transform of simp phantom with the one from phantom
+    self.workingVolume.calibTransfoNode.CopyContent(self.phantom.calibTransfoNode)
 
-      if self.phantom.firstCalibration:
-        if self.singlePointMeasurements:
-          for spm in self.singlePointMeasurements:
-            spm.fullReset(self.phantom.calGtPts, self.phantom.centralDivot)
-        if self.distMeasurement:
-          self.distMeasurement.fullReset(self.phantom.calGtPts, self.phantom.seq)
-        # but also reset rotation measurements then
-        for r in self.rotMeasurements:
-          r.fullReset()
+    # Full reset of all measurements if first calibration
+    if self.phantom.firstCalibration:
+      if self.singlePointMeasurements:
+        for spm in self.singlePointMeasurements:
+          spm.fullReset(self.phantom.calGtPts, self.phantom.centralDivot)
+      if self.distMeasurement:
+        self.distMeasurement.fullReset(self.phantom.calGtPts, self.phantom.seq)
+      # but also reset rotation measurements then
+      for r in self.rotMeasurements:
+        r.fullReset()
 
-        self.phantom.firstCalibration = False
-        self.startWorkingVolumeGuidance()
-      else:
-        # new calib => new calibrated ground truth for the accuracy measurements
-        if self.singlePointMeasurements:
-          for spm in self.singlePointMeasurements:
-            spm.setGtPts(self.phantom.calGtPts)
-        if self.distMeasurement:
-          self.distMeasurement.setGtPts(self.phantom.calGtPts)
+      self.phantom.firstCalibration = False
+      self.startWorkingVolumeGuidance()
+    else:
+      # new calib => new calibrated ground truth for the accuracy measurements
+      if self.singlePointMeasurements:
+        for spm in self.singlePointMeasurements:
+          spm.setGtPts(self.phantom.calGtPts)
+      if self.distMeasurement:
+        self.distMeasurement.setGtPts(self.phantom.calGtPts)
 
-        self.initAndStartTests()
+      # Start the first test
+      self.startCurrentTest()
 
   # --------------------- Working volume guidance ---------------------
   def startWorkingVolumeGuidance(self):
     logging.info('Starting working volume guidance')
+    self.wvGuidanceActive = True
     # make sure the correct scene is rendered
     if self.mainWidget and self.topWVWidget and self.frontWVWidget:
       self.mainWidget.hide()
@@ -1224,14 +1277,25 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.wvTargetsTop.RemoveObserver(self.wvgObs2)
     self.pointer.setMovingTolerance(self.workingVolume.movingToleranceFromDepth(np.linalg.norm(cd[1:4])))
 
+    # Initialize tests (must be done before removing target)
+    self.initTests()
+    # Remove target
     self.removeWorkingVolumeTarget(self.curLoc)
-    if self.recalibAtLocation:
+    self.wvGuidanceActive = False
+
+    # If no test enabled, loop back to working volume guidance
+    if not len(self.testsToDo) > 0:
+      self.InvokeEvent(self.locationFinished, self.curLoc)
+      self.startWorkingVolumeGuidance()
+    # If recalib at location is enabled, start the phantom calibration
+    elif self.recalibAtLocation:
       self.startPhantomCalibration()
+    # otherwise start the first test
     else:
-      self.initAndStartTests()
+      self.startCurrentTest()
 
   # ---------------------------- Tests Control -----------------------------
-  def initAndStartTests(self):
+  def initTests(self):
     # Initialize tests todo list
     self.testsToDo = []
     for t in self.tests:
@@ -1245,9 +1309,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.rotMeasurements[1].reset()
     self.rotMeasurements[2].reset()
     self.distMeasurement.reset(self.phantom.seq)
-    self.startNextTest()
 
-  def startNextTest(self):
+  def startCurrentTest(self):
     if len(self.testsToDo) == 0:
       self.InvokeEvent(self.locationFinished, self.curLoc)
       self.startWorkingVolumeGuidance()
@@ -1269,14 +1332,32 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       if self.testsToDo[0] == 'dist':
         self.startDistTest()
 
+  def startNextTest(self):
+    self.InvokeEvent(self.testFinished, self.testsToDo[0])
+    self.testsToDo.pop(0) # remove the test
+    self.startCurrentTest()
+  
+  def stopCurrentTest(self):
+    if self.runningTest and len(self.testsToDo) > 0:
+      if self.testsToDo[0] in ['singleL', 'singleR', 'single']:
+        self.stopSinglePtTest()
+      if self.testsToDo[0] in ['roll', 'pitch', 'yaw']:
+        self.stopRotationTest()
+      if self.testsToDo[0] == 'dist':
+        self.stopDistTest()
+
+  # /!\ this function is only to be used for debugging /!\
+  def skipTest(self):
+      self.stopCurrentTest()
+      self.startNextTest()
+
   # ---------------------------- Single Point Test -----------------------------
   def startSinglePtTest(self, i):
     self.curSingMeas = self.singlePointMeasurements[i]
-    logging.info(f'***** [{self.curLoc}] Single Point Test Start [{self.curSingMeas.refOriName}]*****')
+    logging.info(f'***** [{self.curLoc}] {self.curSingMeas.refOriName} Single Point Test Start*****')
     self.curSingMeas.curLoc = self.curLoc # assign current location
+    self.curSingMeas.reset() # must be done after curLoc assigned
     self.curSingMeas.acquiNumMax = 20
-    # Initialize measurements at this location
-    self.curSingMeas.measurements[self.curLoc] = np.empty((0,3), float)
     if not self.singleAnn:
       self.singleAnn = vtk.vtkCornerAnnotation()
       self.singleAnn.GetTextProperty().SetFontSize(180)
@@ -1294,6 +1375,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     annTxt = f'{self.curSingMeas.refOriName}\n{self.curSingMeas.acquiNum}/{self.curSingMeas.acquiNumMax}'
     self.singleAnn.SetText(3, annTxt) # 3 = top right
     self.singPtMeasNext()
+    self.runningTest = True
     self.resetCam()
 
   def singPtMeasNext(self):
@@ -1303,7 +1385,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     else:
       # play sound
       self.sounds["done"].play()
-      self.stopSinglePtTest()
+      self.finishSinglePtTest()
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onSingPtMeasTargetDone(self, caller, event, calldata):
@@ -1324,7 +1406,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.singPtMeasNext()
 
   def stopSinglePtTest(self):
-    logging.info(f'----- [{self.curLoc}] Single Point Test Stop -----')
+    logging.info(f'_____ [{self.curLoc}] Single Point Test Stop _____')
     if self.mainRenderer:
       self.mainRenderer.RemoveActor(self.singleAnn)
     self.targets.proxiDetect = False
@@ -1332,9 +1414,11 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.RemoveObserver(self.test1Obs1)
     self.targets.RemoveObserver(self.test1Obs2)
     self.targets.RemoveObserver(self.test1Obs3)
-    # Go to next test
-    self.InvokeEvent(self.testFinished, self.testsToDo[0])
-    self.testsToDo.pop(0) # remove the test
+    self.runningTest = False
+
+  def finishSinglePtTest(self):
+    logging.info(f'----- [{self.curLoc}] Single Point Test Finished -----')
+    self.stopSinglePtTest()
     self.startNextTest()
 
   # ---------------------------- Rotation Tests -----------------------------
@@ -1344,8 +1428,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.curRotAxisName = self.curRotMeas.rotAxisName
     logging.info(f'***** [{self.curLoc}] {self.curRotAxisName} Rotation Test Start *****')
     self.curRotMeas.curLoc = self.curLoc # assign current location
-    # Initialize measurements at this location
-    self.curRotMeas.measurements[self.curLoc] = np.empty((0,4), float)
+    self.curRotMeas.reset() # must be done after curLoc assigned and before basePos assignment
     # if base position not defined by Single Point Test (with normal orientation),
     # use our other best estimate of it, which comes from the calibration
     if self.singlePointMeasurements[2].avgPos is not None:
@@ -1368,10 +1451,14 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.onRotMeasTargetHit)
     self.rotTestObs2 = self.targets.AddObserver(self.targets.targetOutEvent,
       self.onRotMeasTargetOut)
+    self.rotTestObs3 = None
+    self.rotTestObs4 = None
+    self.rotTestObs5 = None
     div = self.singlePointMeasurements[0].divot # use same central divot as Single Point Test 
     self.targets.addTarget(div, self.phantom.divPos(div), True)
 
     self.rotTestAcquiring = False
+    self.runningTest = True
     self.resetCam()
 
   @vtk.calldata_type(vtk.VTK_STRING)
@@ -1446,34 +1533,35 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       logging.info(f"    Rotation Acquisition Stopped !")
       # play sound
       self.sounds["done"].play()
-      self.stopRotationTest()
+      self.finishRotationTest()
 
   def stopRotationTest(self):
-    logging.info(f'----- [{self.curLoc}] {self.curRotAxisName} Rotation Test Stop -----')
+    logging.info(f'_____ [{self.curLoc}] {self.curRotAxisName} Rotation Test Stop _____')
     self.onRotMeasTargetOut(self) # stop monitoring tracking and angles
     self.targets.proxiDetect = False
     self.targets.removeAllTargets()
     self.targets.RemoveObserver(self.rotTestObs1)
     self.targets.RemoveObserver(self.rotTestObs2)
-
     self.curRotMeas.updateStats()
-    # Go to next test
-    self.InvokeEvent(self.testFinished, self.testsToDo[0])
-    self.testsToDo.pop(0) # remove the test
+    self.runningTest = False
+
+  def finishRotationTest(self):
+    logging.info(f'----- [{self.curLoc}] {self.curRotAxisName} Rotation Test Finished -----')
+    self.stopRotationTest()
     self.startNextTest()
 
   # ---------------------------- Multi-point Test -----------------------------
   def startDistTest(self):
     logging.info(f'***** [{self.curLoc}] Multi-point Test Start *****')
     self.distMeasurement.curLoc = self.curLoc # assign current location
-    # Initialize measurements at this location
-    self.distMeasurement.measurements[self.curLoc] = {}
+    self.distMeasurement.reset(self.phantom.seq) # must be done after curLoc assigned
     # Manage targets
     self.targets.proxiDetect = True
     self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startAcquiring)
     self.targets.AddObserver(self.targets.targetDoneEvent, self.onDistMeasTargetDone)
     self.targets.AddObserver(self.targets.targetDoneOutEvent, self.onDistMeasTargetDoneOut)
     self.distMeasNextDiv()
+    self.runningTest = True
     self.resetCam()
 
   def distMeasNextDiv(self):
@@ -1484,7 +1572,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     else:
       # play sound
       self.sounds["done"].play()
-      self.stopDistTest()
+      self.finishDistTest()
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onDistMeasTargetDone(self, caller, event, calldata):
@@ -1506,15 +1594,17 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.distMeasNextDiv()
 
   def stopDistTest(self):
-    logging.info(f'----- [{self.curLoc}] Multi-point Test Stop -----')
+    logging.info(f'_____ [{self.curLoc}] Multi-point Test Stop _____')
     self.targets.proxiDetect = False
     self.targets.removeAllTargets()
     self.targets.RemoveAllObservers()
     self.targetsDone.removeAllTargets()
     self.targetsDone.RemoveAllObservers()
-    # Go to next test
-    self.InvokeEvent(self.testFinished, self.testsToDo[0])
-    self.testsToDo.pop(0) # remove the test
+    self.runningTest = False
+
+  def finishDistTest(self):
+    logging.info(f'----- [{self.curLoc}] Multi-point Test Finished -----')
+    self.stopDistTest()
     self.startNextTest()
 
   # -------------------------------------------------------------------
@@ -1524,11 +1614,12 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     # All data serialization
     dts = self.startTime.strftime("%Y.%m.%d_%H.%M.%S")
     jsonPath =  self.savePath + f"/AstmPhantomTest_data_{dts}.json"
+    htmlPath = self.savePath + f"/AstmPhantomTest_report_{dts}.html"
     self.endTime = datetime.now()
     td = self.endTime - self.startTime # time delta
     durStr = f"{td.days*24+td.seconds//3600}h{td.seconds%3600//60}min{td.seconds%60}s"
     if self.pointer.acquiMode == 0:
-      pointAcquiMode = "1-frame"
+      pointAcquiMode = f"1-frame ({self.pointer.timerDuration}ms)"
     elif self.pointer.acquiMode == 1:
       pointAcquiMode = f"Mean ({self.pointer.numFrames} frames)"
     elif self.pointer.acquiMode == 2:
@@ -1561,23 +1652,30 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       "Multi-point Measurements": self.distMeasurement.measurements},
       indent = 2,
       cls=NumpyEncoder) # important to use the custom class to handle nd-array serialization
-    with open(jsonPath, 'w') as outfile:
-      outfile.write(obj)
-      logging.info(f'All measurements written in {jsonPath}')
+    with open(jsonPath, 'w') as jsonFile:
+      logging.info(f'Writing all measurements in {jsonPath}')
+      jsonFile.write(obj)
+      jsonFile.close()
 
     # Generating report in HTML
     # Stack all values
     locations = ["CL", "BL", "TL", "LL", "RL"] # match html order
     def lookup(d, k, locs): # look up key k in dict d at locations locs
+      logging.info(f"d:{d}, k:{k}, locs:{locs}")
       lst = []
       for l in locs:
         if l in d:
-          if k in d[l]:
-            if isinstance(d[l][k], float):
-              lst.append(round(d[l][k],2)) # if float, round to 2 decimal places
-            else:
-              lst.append(d[l][k])
-            continue
+          if d[l] is not None:
+            if k in d[l]:
+              if isinstance(d[l][k], float):
+                lst.append(round(d[l][k],2)) # if float, round to 2 decimal places
+              else:
+                lst.append(d[l][k])
+              continue
+          # skipped
+          lst.append("x")
+          continue
+        # disabled
         lst.append("-")
       return lst
 
@@ -1621,169 +1719,171 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         lookup(self.distMeasurement.regStats,"min", locations),
         lookup(self.distMeasurement.regStats,"max", locations),
         lookup(self.distMeasurement.regStats,"rms", locations)]
-    f = open(self.savePath + f"/AstmPhantomTest_report_{dts}.html", "w")
-    f.write(
-      f'<!DOCTYPE html>\n'
-      f'<html>\n'
-      f'<head>\n'
-      f'<style>\n'
-      f'table {{\n'
-      f'  font-family: arial, sans-serif;\n'
-      f'  border-collapse: collapse;\n'
-      f'}}\n'
-      f'\n'
-      f'td, th {{\n'
-      f'  border: 1px solid #00355B;\n'
-      f'  text-align: center;\n'
-      f'  padding: 8px;\n'
-      f'}}\n'
-      f'\n'
-      f'td {{'
-      f'  min-width: 40px;\n'
-      f'}}\n'
-      f'\n'
-      f'tr:nth-child(even) {{\n'
-      f'  background-color: #D2F1FF;\n'
-      f'}}\n'
-      f'td:nth-child(1) {{\n'
-      f'  text-align: right;\n'
-      f'}}\n'
-      f'</style>\n'
-      f'</head>\n'
-      f'<body>\n'
-      f'\n'
-      f'<h2>ASTM Phantom Tests Report</h2>\n'
-      f'<div style="overflow-x: auto;">\n'
-      f'<table style="min-width: 400px;">\n'
-      f'  <tr><td width="175px">Start date_time</td><td>{dts}</td></tr>\n'
-      f'  <tr><td>Duration</td><td>{durStr}</td></tr>\n'
-      f'  <tr><td>Operator id</td><td>{self.operatorId}</td></tr>\n'
-      f'  <tr><td>Tracker Serial number</td><td>{self.trackerId}</td></tr>\n'
-      f'</table>\n'
-      f'<p>\n'
-      f'<table style="min-width: 400px;">\n'
-      f'  <tr><td width="175px">Pointer id</td><td>{self.pointer.id}</td></tr>\n'
-      f'  <tr><td>Working volume id</td><td>{self.workingVolume.id}</td></tr>\n'
-      f'  <tr><td>Phantom id</td><td>{self.phantom.id}</td></tr>\n'
-      f'  <tr><td>Central divot id</td><td>{self.phantom.centralDivot}</td></tr>\n'
-      f'  <tr><td>Point acquisition</td><td>{pointAcquiMode}</td></tr>\n'
-      f'  <tr><td>Recalib at each location</td><td>{self.recalibAtLocation}</td></tr>\n'
-      f'</table>\n'
-      f'\n'
-      f'<h3>Single Point Accuracy and Precision Test</h3>\n'
-      f'This test measures the accuracy and precision of single point acquisition by repeatedly picking the central divot. The number of measurements is reported in the table below.<br>\n'
-      f'For accuracy, the errors are the vectors from the corresponding reference point (central divot) to each measurement. The accuracy mean is the length of the average of these vectors. The accuracy max is the length of the longest vector.<br>\n'
-      f'For precision, the maximum distance of between two measurements (span) is reported. Also, the deviations are calculated as the distances of all the measurements from their average. Calculated as such, the Root Mean Square (RMS) of the deviations equates their standard deviation and is reported.\n'
-      f'<p>\n'
-      f'At each location, the single point test is to be performed with three different phantom orientations: normal, extremes to the left and to the right. The normal orientation is with the phantom rotated such that the attached reference element is optimally located by the tracker. The two extreme orientations correspond to the most extreme left and right rotations of the phantom while maintaining tracking of the attached reference element.\n'
-      f'\n'
-      f'<h4>{self.singlePointMeasurements[0].refOriName}</h4>\n'
-      f'\n'
-      f'<table style="max-width: 700px;" class="hide">\n'
-      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{s0v[0][0]}</td><td>{s0v[0][1]}</td><td>{s0v[0][2]}</td><td>{s0v[0][3]}</td><td>{s0v[0][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
-      f'      <td>Mean</td><td><b>{s0v[1][0]}</td><td>{s0v[1][1]}</td><td>{s0v[1][2]}</td><td>{s0v[1][3]}</td><td>{s0v[1][4]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{s0v[2][0]}</td><td>{s0v[2][1]}</td><td>{s0v[2][2]}</td><td>{s0v[2][3]}</td><td>{s0v[2][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{s0v[3][0]}</td><td>{s0v[3][1]}</td><td>{s0v[3][2]}</td><td>{s0v[3][3]}</td><td>{s0v[3][4]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{s0v[4][0]}</td><td>{s0v[4][1]}</td><td>{s0v[4][2]}</td><td>{s0v[4][3]}</td><td>{s0v[4][4]}</td></tr>\n'
-      f'</table>\n'
-      f'\n'
-      f'<h4>{self.singlePointMeasurements[1].refOriName}</h4>\n'
-      f'\n'
-      f'<table style="max-width: 700px;" class="hide">\n'
-      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{s1v[0][0]}</td><td>{s1v[0][1]}</td><td>{s1v[0][2]}</td><td>{s1v[0][3]}</td><td>{s1v[0][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
-      f'      <td>Mean</td><td><b>{s1v[1][0]}</td><td>{s1v[1][1]}</td><td>{s1v[1][2]}</td><td>{s1v[1][3]}</td><td>{s1v[1][4]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{s1v[2][0]}</td><td>{s1v[2][1]}</td><td>{s1v[2][2]}</td><td>{s1v[2][3]}</td><td>{s1v[2][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{s1v[3][0]}</td><td>{s1v[3][1]}</td><td>{s1v[3][2]}</td><td>{s1v[3][3]}</td><td>{s1v[3][4]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{s1v[4][0]}</td><td>{s1v[4][1]}</td><td>{s1v[4][2]}</td><td>{s1v[4][3]}</td><td>{s1v[4][4]}</td></tr>\n'
-      f'</table>\n'
-      f'\n'
-      f'<h4>{self.singlePointMeasurements[2].refOriName}</h4>\n'
-      f'\n'
-      f'<table style="max-width: 700px;" class="hide">\n'
-      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{s2v[0][0]}</td><td>{s2v[0][1]}</td><td>{s2v[0][2]}</td><td>{s2v[0][3]}</td><td>{s2v[0][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
-      f'      <td>Mean</td><td><b>{s2v[1][0]}</td><td>{s2v[1][1]}</td><td>{s2v[1][2]}</td><td>{s2v[1][3]}</td><td>{s2v[1][4]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{s2v[2][0]}</td><td>{s2v[2][1]}</td><td>{s2v[2][2]}</td><td>{s2v[2][3]}</td><td>{s2v[2][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{s2v[3][0]}</td><td>{s2v[3][1]}</td><td>{s2v[3][2]}</td><td>{s2v[3][3]}</td><td>{s2v[3][4]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{s2v[4][0]}</td><td>{s2v[4][1]}</td><td>{s2v[4][2]}</td><td>{s2v[4][3]}</td><td>{s2v[4][4]}</td></tr>\n'
-      f'</table>\n'
-      f'\n'
-      f'<h3>Rotation Precision Tests</h3>\n'
-      f'The rotation tests measure the precision of single point acquisition under various orientations of the pointer. These orientations consists of <b>successive</b> rotations around the roll, pitch and yaw axes of the pointer.<br>\n'
-      f'The measurements consist in sampling the position of the pointer every 1° during a rotation. The number of measurements is reported in the table below.<br>\n'
-      f'For each rotation axis (roll, pitch, yaw), the minimum and maximum angles for which tracking is possible are reported.<br>\n'
-      f'For precision, the maximum distance of between two measurements (span) and the RMS of the deviations are reported. The deviations are calculated as the distances of each measurement from the average position previously determined in the Single Point Test with the normal orientation. If that Single Point Test with normal orientation was not performed, then the ground truth position of the measured divot is used instead.\n'
-      f'\n'
-      f'<h4>{self.rotMeasurements[0].rotAxisName} Rotation Precision Test</h4>\n'
-      f'\n'
-      f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r0v[0][0]}</td><td>{r0v[0][1]}</td><td>{r0v[0][2]}</td><td>{r0v[0][3]}</td><td>{r0v[0][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Angle (°)</td>\n'
-      f'      <td>Min</td><td><b>{r0v[1][0]}</td><td>{r0v[1][1]}</td><td>{r0v[1][2]}</td><td>{r0v[1][3]}</td><td>{r0v[1][4]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{r0v[2][0]}</td><td>{r0v[2][1]}</td><td>{r0v[2][2]}</td><td>{r0v[2][3]}</td><td>{r0v[2][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{r0v[3][0]}</td><td>{r0v[3][1]}</td><td>{r0v[3][2]}</td><td>{r0v[3][3]}</td><td>{r0v[3][4]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{r0v[4][0]}</td><td>{r0v[4][1]}</td><td>{r0v[4][2]}</td><td>{r0v[4][3]}</td><td>{r0v[4][4]}</td></tr>\n'
-      f'</table>\n'
-      f'\n'
-      f'<h4>{self.rotMeasurements[1].rotAxisName} Rotation Precision Test</h4>\n'
-      f'\n'
-      f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r1v[0][0]}</td><td>{r1v[0][1]}</td><td>{r1v[0][2]}</td><td>{r1v[0][3]}</td><td>{r1v[0][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Angle (°)</td>\n'
-      f'      <td>Min</td><td><b>{r1v[1][0]}</td><td>{r1v[1][1]}</td><td>{r1v[1][2]}</td><td>{r1v[1][3]}</td><td>{r1v[1][4]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{r1v[2][0]}</td><td>{r1v[2][1]}</td><td>{r1v[2][2]}</td><td>{r1v[2][3]}</td><td>{r1v[2][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{r1v[3][0]}</td><td>{r1v[3][1]}</td><td>{r1v[3][2]}</td><td>{r1v[3][3]}</td><td>{r1v[3][4]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{r1v[4][0]}</td><td>{r1v[4][1]}</td><td>{r1v[4][2]}</td><td>{r1v[4][3]}</td><td>{r1v[4][4]}</td></tr>\n'
-      f'</table>\n'
-      f'\n'
-      f'<h4>{self.rotMeasurements[2].rotAxisName} Rotation Precision Test</h4>\n'
-      f'\n'
-      f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r2v[0][0]}</td><td>{r2v[0][1]}</td><td>{r2v[0][2]}</td><td>{r2v[0][3]}</td><td>{r2v[0][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Angle (°)</td>\n'
-      f'      <td>Min</td><td><b>{r2v[1][0]}</td><td>{r2v[1][1]}</td><td>{r2v[1][2]}</td><td>{r2v[1][3]}</td><td>{r2v[1][4]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{r2v[2][0]}</td><td>{r2v[2][1]}</td><td>{r2v[2][2]}</td><td>{r2v[2][3]}</td><td>{r2v[2][4]}</td></tr>\n'
-      f'  <tr><td rowspan="2">Precision (mm)</td>\n'
-      f'      <td>Span</td><td><b>{r2v[3][0]}</td><td>{r2v[3][1]}</td><td>{r2v[3][2]}</td><td>{r2v[3][3]}</td><td>{r2v[3][4]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{r2v[4][0]}</td><td>{r2v[4][1]}</td><td>{r2v[4][2]}</td><td>{r2v[4][3]}</td><td>{r2v[4][4]}</td></tr>\n'
-      f'</table>\n'
-      f'\n'
-      f'<h3>Multi-point Accuracy Test</h3>\n'
-      f'This test measures the spatial relationship between various acquired points and compare it to the reference values. This can be done in two ways: distances or point cloud registration.<br>\n'
-      f'The distances are calculated for all combinations of pair of points. So, for N points measured, there are N(N-1)/2 distances (e.g. 20 measured points gives 190 distances). For each pair of points, the error is calculated as the difference with the corresponding reference pair in terms of distance. The number of distances and the mean, minimum, maximum and RMS of these errors are reported below.<br>\n'
-      f'The registration is performed between the point clouds from the measurements and from the reference. The mean, minimum, maximum, RMS of the registration residuals are reported below.\n'
-      f'<p>\n'
-      f'<table style="max-width: 700px;">\n'
-      f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
-      f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{mv[0][0]}</td><td>{mv[0][1]}</td><td>{mv[0][2]}</td><td>{mv[0][3]}</td><td>{mv[0][4]}</td></tr>\n'
-      f'  <tr><td rowspan="5">Distances (mm)</td>\n'
-      f'      <td>Num.</td><td><b>{mv[1][0]}</td><td>{mv[1][1]}</td><td>{mv[1][2]}</td><td>{mv[1][3]}</td><td>{mv[1][4]}</td></tr>\n'
-      f'  <tr><td>Mean</td><td><b>{mv[2][0]}</td><td>{mv[2][1]}</td><td>{mv[2][2]}</td><td>{mv[2][3]}</td><td>{mv[2][4]}</td></tr>\n'
-      f'  <tr><td>Min</td><td><b>{mv[3][0]}</td><td>{mv[3][1]}</td><td>{mv[3][2]}</td><td>{mv[3][3]}</td><td>{mv[3][4]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{mv[4][0]}</td><td>{mv[4][1]}</td><td>{mv[4][2]}</td><td>{mv[4][3]}</td><td>{mv[4][4]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{mv[5][0]}</td><td>{mv[5][1]}</td><td>{mv[5][2]}</td><td>{mv[5][3]}</td><td>{mv[5][4]}</td></tr>\n'
-      f'  <tr><td rowspan="4">Registration (mm)</td>\n'
-      f'      <td>Mean</td><td><b>{mv[6][0]}</td><td>{mv[6][1]}</td><td>{mv[6][2]}</td><td>{mv[6][3]}</td><td>{mv[6][4]}</td></tr>\n'
-      f'  <tr><td>Min</td><td><b>{mv[7][0]}</td><td>{mv[7][1]}</td><td>{mv[7][2]}</td><td>{mv[7][3]}</td><td>{mv[7][4]}</td></tr>\n'
-      f'  <tr><td>Max</td><td><b>{mv[8][0]}</td><td>{mv[8][1]}</td><td>{mv[8][2]}</td><td>{mv[8][3]}</td><td>{mv[8][4]}</td></tr>\n'
-      f'  <tr><td>RMS</td><td><b>{mv[9][0]}</td><td>{mv[9][1]}</td><td>{mv[9][2]}</td><td>{mv[9][3]}</td><td>{mv[9][4]}</td></tr>\n'
-      f'</table>\n'
-      f'</div>\n'
-      f'</body>\n'
-      f'</html>\n'
-      )
-    f.close()
+
+    with open(htmlPath, 'w') as htmlFile:
+      logging.info(f'Writing report in {htmlPath}')
+      htmlFile.write(
+        f'<!DOCTYPE html>\n'
+        f'<html>\n'
+        f'<head>\n'
+        f'<style>\n'
+        f'table {{\n'
+        f'  font-family: arial, sans-serif;\n'
+        f'  border-collapse: collapse;\n'
+        f'}}\n'
+        f'\n'
+        f'td, th {{\n'
+        f'  border: 1px solid #00355B;\n'
+        f'  text-align: center;\n'
+        f'  padding: 8px;\n'
+        f'}}\n'
+        f'\n'
+        f'td {{'
+        f'  min-width: 40px;\n'
+        f'}}\n'
+        f'\n'
+        f'tr:nth-child(even) {{\n'
+        f'  background-color: #D2F1FF;\n'
+        f'}}\n'
+        f'td:nth-child(1) {{\n'
+        f'  text-align: right;\n'
+        f'}}\n'
+        f'</style>\n'
+        f'</head>\n'
+        f'<body>\n'
+        f'\n'
+        f'<h2>ASTM Phantom Tests Report</h2>\n'
+        f'<div style="overflow-x: auto;">\n'
+        f'<table style="min-width: 400px;">\n'
+        f'  <tr><td width="175px">Start date_time</td><td>{dts}</td></tr>\n'
+        f'  <tr><td>Duration</td><td>{durStr}</td></tr>\n'
+        f'  <tr><td>Operator id</td><td>{self.operatorId}</td></tr>\n'
+        f'  <tr><td>Tracker Serial number</td><td>{self.trackerId}</td></tr>\n'
+        f'</table>\n'
+        f'<p>\n'
+        f'<table style="min-width: 400px;">\n'
+        f'  <tr><td width="175px">Pointer id</td><td>{self.pointer.id}</td></tr>\n'
+        f'  <tr><td>Working volume id</td><td>{self.workingVolume.id}</td></tr>\n'
+        f'  <tr><td>Phantom id</td><td>{self.phantom.id}</td></tr>\n'
+        f'  <tr><td>Central divot id</td><td>{self.phantom.centralDivot}</td></tr>\n'
+        f'  <tr><td>Point acquisition</td><td>{pointAcquiMode}</td></tr>\n'
+        f'  <tr><td>Recalib at each location</td><td>{self.recalibAtLocation}</td></tr>\n'
+        f'</table>\n'
+        f'\n'
+        f'<h3>Single Point Accuracy and Precision Test</h3>\n'
+        f'This test measures the accuracy and precision of single point acquisition by repeatedly picking the central divot. The number of measurements is reported in the table below.<br>\n'
+        f'For accuracy, the errors are the vectors from the corresponding reference point (central divot) to each measurement. The accuracy mean is the length of the average of these vectors. The accuracy max is the length of the longest vector.<br>\n'
+        f'For precision, the maximum distance of between two measurements (span) is reported. Also, the deviations are calculated as the distances of all the measurements from their average. Calculated as such, the Root Mean Square (RMS) of the deviations equates their standard deviation and is reported.\n'
+        f'<p>\n'
+        f'At each location, the single point test is to be performed with three different phantom orientations: normal, extremes to the left and to the right. The normal orientation is with the phantom rotated such that the attached reference element is optimally located by the tracker. The two extreme orientations correspond to the most extreme left and right rotations of the phantom while maintaining tracking of the attached reference element.\n'
+        f'\n'
+        f'<h4>{self.singlePointMeasurements[0].refOriName}</h4>\n'
+        f'\n'
+        f'<table style="max-width: 700px;" class="hide">\n'
+        f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+        f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{s0v[0][0]}</td><td>{s0v[0][1]}</td><td>{s0v[0][2]}</td><td>{s0v[0][3]}</td><td>{s0v[0][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
+        f'      <td>Mean</td><td><b>{s0v[1][0]}</td><td>{s0v[1][1]}</td><td>{s0v[1][2]}</td><td>{s0v[1][3]}</td><td>{s0v[1][4]}</td></tr>\n'
+        f'  <tr><td>Max</td><td><b>{s0v[2][0]}</td><td>{s0v[2][1]}</td><td>{s0v[2][2]}</td><td>{s0v[2][3]}</td><td>{s0v[2][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Precision (mm)</td>\n'
+        f'      <td>Span</td><td><b>{s0v[3][0]}</td><td>{s0v[3][1]}</td><td>{s0v[3][2]}</td><td>{s0v[3][3]}</td><td>{s0v[3][4]}</td></tr>\n'
+        f'  <tr><td>RMS</td><td><b>{s0v[4][0]}</td><td>{s0v[4][1]}</td><td>{s0v[4][2]}</td><td>{s0v[4][3]}</td><td>{s0v[4][4]}</td></tr>\n'
+        f'</table>\n'
+        f'\n'
+        f'<h4>{self.singlePointMeasurements[1].refOriName}</h4>\n'
+        f'\n'
+        f'<table style="max-width: 700px;" class="hide">\n'
+        f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+        f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{s1v[0][0]}</td><td>{s1v[0][1]}</td><td>{s1v[0][2]}</td><td>{s1v[0][3]}</td><td>{s1v[0][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
+        f'      <td>Mean</td><td><b>{s1v[1][0]}</td><td>{s1v[1][1]}</td><td>{s1v[1][2]}</td><td>{s1v[1][3]}</td><td>{s1v[1][4]}</td></tr>\n'
+        f'  <tr><td>Max</td><td><b>{s1v[2][0]}</td><td>{s1v[2][1]}</td><td>{s1v[2][2]}</td><td>{s1v[2][3]}</td><td>{s1v[2][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Precision (mm)</td>\n'
+        f'      <td>Span</td><td><b>{s1v[3][0]}</td><td>{s1v[3][1]}</td><td>{s1v[3][2]}</td><td>{s1v[3][3]}</td><td>{s1v[3][4]}</td></tr>\n'
+        f'  <tr><td>RMS</td><td><b>{s1v[4][0]}</td><td>{s1v[4][1]}</td><td>{s1v[4][2]}</td><td>{s1v[4][3]}</td><td>{s1v[4][4]}</td></tr>\n'
+        f'</table>\n'
+        f'\n'
+        f'<h4>{self.singlePointMeasurements[2].refOriName}</h4>\n'
+        f'\n'
+        f'<table style="max-width: 700px;" class="hide">\n'
+        f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+        f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{s2v[0][0]}</td><td>{s2v[0][1]}</td><td>{s2v[0][2]}</td><td>{s2v[0][3]}</td><td>{s2v[0][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Accuracy (mm)</td>\n'
+        f'      <td>Mean</td><td><b>{s2v[1][0]}</td><td>{s2v[1][1]}</td><td>{s2v[1][2]}</td><td>{s2v[1][3]}</td><td>{s2v[1][4]}</td></tr>\n'
+        f'  <tr><td>Max</td><td><b>{s2v[2][0]}</td><td>{s2v[2][1]}</td><td>{s2v[2][2]}</td><td>{s2v[2][3]}</td><td>{s2v[2][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Precision (mm)</td>\n'
+        f'      <td>Span</td><td><b>{s2v[3][0]}</td><td>{s2v[3][1]}</td><td>{s2v[3][2]}</td><td>{s2v[3][3]}</td><td>{s2v[3][4]}</td></tr>\n'
+        f'  <tr><td>RMS</td><td><b>{s2v[4][0]}</td><td>{s2v[4][1]}</td><td>{s2v[4][2]}</td><td>{s2v[4][3]}</td><td>{s2v[4][4]}</td></tr>\n'
+        f'</table>\n'
+        f'\n'
+        f'<h3>Rotation Precision Tests</h3>\n'
+        f'The rotation tests measure the precision of single point acquisition under various orientations of the pointer. These orientations consists of <b>successive</b> rotations around the roll, pitch and yaw axes of the pointer.<br>\n'
+        f'The measurements consist in sampling the position of the pointer every 1° during a rotation. The number of measurements is reported in the table below.<br>\n'
+        f'For each rotation axis (roll, pitch, yaw), the minimum and maximum angles for which tracking is possible are reported.<br>\n'
+        f'For precision, the maximum distance of between two measurements (span) and the RMS of the deviations are reported. The deviations are calculated as the distances of each measurement from the average position previously determined in the Single Point Test with the normal orientation. If that Single Point Test with normal orientation was not performed, then the ground truth position of the measured divot is used instead.\n'
+        f'\n'
+        f'<h4>{self.rotMeasurements[0].rotAxisName} Rotation Precision Test</h4>\n'
+        f'\n'
+        f'<table style="max-width: 700px;">\n'
+        f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+        f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r0v[0][0]}</td><td>{r0v[0][1]}</td><td>{r0v[0][2]}</td><td>{r0v[0][3]}</td><td>{r0v[0][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Angle (°)</td>\n'
+        f'      <td>Min</td><td><b>{r0v[1][0]}</td><td>{r0v[1][1]}</td><td>{r0v[1][2]}</td><td>{r0v[1][3]}</td><td>{r0v[1][4]}</td></tr>\n'
+        f'  <tr><td>Max</td><td><b>{r0v[2][0]}</td><td>{r0v[2][1]}</td><td>{r0v[2][2]}</td><td>{r0v[2][3]}</td><td>{r0v[2][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Precision (mm)</td>\n'
+        f'      <td>Span</td><td><b>{r0v[3][0]}</td><td>{r0v[3][1]}</td><td>{r0v[3][2]}</td><td>{r0v[3][3]}</td><td>{r0v[3][4]}</td></tr>\n'
+        f'  <tr><td>RMS</td><td><b>{r0v[4][0]}</td><td>{r0v[4][1]}</td><td>{r0v[4][2]}</td><td>{r0v[4][3]}</td><td>{r0v[4][4]}</td></tr>\n'
+        f'</table>\n'
+        f'\n'
+        f'<h4>{self.rotMeasurements[1].rotAxisName} Rotation Precision Test</h4>\n'
+        f'\n'
+        f'<table style="max-width: 700px;">\n'
+        f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+        f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r1v[0][0]}</td><td>{r1v[0][1]}</td><td>{r1v[0][2]}</td><td>{r1v[0][3]}</td><td>{r1v[0][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Angle (°)</td>\n'
+        f'      <td>Min</td><td><b>{r1v[1][0]}</td><td>{r1v[1][1]}</td><td>{r1v[1][2]}</td><td>{r1v[1][3]}</td><td>{r1v[1][4]}</td></tr>\n'
+        f'  <tr><td>Max</td><td><b>{r1v[2][0]}</td><td>{r1v[2][1]}</td><td>{r1v[2][2]}</td><td>{r1v[2][3]}</td><td>{r1v[2][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Precision (mm)</td>\n'
+        f'      <td>Span</td><td><b>{r1v[3][0]}</td><td>{r1v[3][1]}</td><td>{r1v[3][2]}</td><td>{r1v[3][3]}</td><td>{r1v[3][4]}</td></tr>\n'
+        f'  <tr><td>RMS</td><td><b>{r1v[4][0]}</td><td>{r1v[4][1]}</td><td>{r1v[4][2]}</td><td>{r1v[4][3]}</td><td>{r1v[4][4]}</td></tr>\n'
+        f'</table>\n'
+        f'\n'
+        f'<h4>{self.rotMeasurements[2].rotAxisName} Rotation Precision Test</h4>\n'
+        f'\n'
+        f'<table style="max-width: 700px;">\n'
+        f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+        f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{r2v[0][0]}</td><td>{r2v[0][1]}</td><td>{r2v[0][2]}</td><td>{r2v[0][3]}</td><td>{r2v[0][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Angle (°)</td>\n'
+        f'      <td>Min</td><td><b>{r2v[1][0]}</td><td>{r2v[1][1]}</td><td>{r2v[1][2]}</td><td>{r2v[1][3]}</td><td>{r2v[1][4]}</td></tr>\n'
+        f'  <tr><td>Max</td><td><b>{r2v[2][0]}</td><td>{r2v[2][1]}</td><td>{r2v[2][2]}</td><td>{r2v[2][3]}</td><td>{r2v[2][4]}</td></tr>\n'
+        f'  <tr><td rowspan="2">Precision (mm)</td>\n'
+        f'      <td>Span</td><td><b>{r2v[3][0]}</td><td>{r2v[3][1]}</td><td>{r2v[3][2]}</td><td>{r2v[3][3]}</td><td>{r2v[3][4]}</td></tr>\n'
+        f'  <tr><td>RMS</td><td><b>{r2v[4][0]}</td><td>{r2v[4][1]}</td><td>{r2v[4][2]}</td><td>{r2v[4][3]}</td><td>{r2v[4][4]}</td></tr>\n'
+        f'</table>\n'
+        f'\n'
+        f'<h3>Multi-point Accuracy Test</h3>\n'
+        f'This test measures the spatial relationship between various acquired points and compare it to the reference values. This can be done in two ways: distances or point cloud registration.<br>\n'
+        f'The distances are calculated for all combinations of pair of points. So, for N points measured, there are N(N-1)/2 distances (e.g. 20 measured points gives 190 distances). For each pair of points, the error is calculated as the difference with the corresponding reference pair in terms of distance. The number of distances and the mean, minimum, maximum and RMS of these errors are reported below.<br>\n'
+        f'The registration is performed between the point clouds from the measurements and from the reference. The mean, minimum, maximum, RMS of the registration residuals are reported below.\n'
+        f'<p>\n'
+        f'<table style="max-width: 700px;">\n'
+        f'  <tr><td colspan="2">Locations</td><td>CL</td><td>BL</td><td>TL</td><td>LL</td><td>RL</td></tr>\n'
+        f'  <tr><td width="175px" colspan="2">Measurements</td><td><b>{mv[0][0]}</td><td>{mv[0][1]}</td><td>{mv[0][2]}</td><td>{mv[0][3]}</td><td>{mv[0][4]}</td></tr>\n'
+        f'  <tr><td rowspan="5">Distances (mm)</td>\n'
+        f'      <td>Num.</td><td><b>{mv[1][0]}</td><td>{mv[1][1]}</td><td>{mv[1][2]}</td><td>{mv[1][3]}</td><td>{mv[1][4]}</td></tr>\n'
+        f'  <tr><td>Mean</td><td><b>{mv[2][0]}</td><td>{mv[2][1]}</td><td>{mv[2][2]}</td><td>{mv[2][3]}</td><td>{mv[2][4]}</td></tr>\n'
+        f'  <tr><td>Min</td><td><b>{mv[3][0]}</td><td>{mv[3][1]}</td><td>{mv[3][2]}</td><td>{mv[3][3]}</td><td>{mv[3][4]}</td></tr>\n'
+        f'  <tr><td>Max</td><td><b>{mv[4][0]}</td><td>{mv[4][1]}</td><td>{mv[4][2]}</td><td>{mv[4][3]}</td><td>{mv[4][4]}</td></tr>\n'
+        f'  <tr><td>RMS</td><td><b>{mv[5][0]}</td><td>{mv[5][1]}</td><td>{mv[5][2]}</td><td>{mv[5][3]}</td><td>{mv[5][4]}</td></tr>\n'
+        f'  <tr><td rowspan="4">Registration (mm)</td>\n'
+        f'      <td>Mean</td><td><b>{mv[6][0]}</td><td>{mv[6][1]}</td><td>{mv[6][2]}</td><td>{mv[6][3]}</td><td>{mv[6][4]}</td></tr>\n'
+        f'  <tr><td>Min</td><td><b>{mv[7][0]}</td><td>{mv[7][1]}</td><td>{mv[7][2]}</td><td>{mv[7][3]}</td><td>{mv[7][4]}</td></tr>\n'
+        f'  <tr><td>Max</td><td><b>{mv[8][0]}</td><td>{mv[8][1]}</td><td>{mv[8][2]}</td><td>{mv[8][3]}</td><td>{mv[8][4]}</td></tr>\n'
+        f'  <tr><td>RMS</td><td><b>{mv[9][0]}</td><td>{mv[9][1]}</td><td>{mv[9][2]}</td><td>{mv[9][3]}</td><td>{mv[9][4]}</td></tr>\n'
+        f'</table>\n'
+        f'</div>\n'
+        f'</body>\n'
+        f'</html>\n'
+        )
+      htmlFile.close()
     

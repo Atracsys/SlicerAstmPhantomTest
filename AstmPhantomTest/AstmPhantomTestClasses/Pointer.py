@@ -45,9 +45,10 @@ class Pointer(vtk.vtkObject):
     self.coordAccumulator = np.array([])  # stores all incoming coordinates during acquisition
     self.numFrames = 30  # number of successive frames considered in the acquisition of a single point
     self.timer = qt.QTimer()
-    self.timerDuration = 1000 # ms, by default 1 second
+    self.timerDuration = 500 # ms, by default 0.5 second
     self.timer.setInterval(50)  # timer ticks every 50 ms
     self.timer.connect('timeout()', self.staticTimerCallback)
+    self.ticks = 0
     # tilt
     self.monitorTilt = True
     self.maxTilt = 60 # default value
@@ -261,7 +262,8 @@ class Pointer(vtk.vtkObject):
       self.acquiring = True
       self.coordAccumulator = np.array([])
       if self.acquiMode == 0:
-        self.maxTicks = int(self.timerDuration / self.timer.interval) + 1
+        self.timer.interval = min(self.timerDuration, self.timer.interval)
+        self.maxTicks = int(self.timerDuration / self.timer.interval)
         self.ticks = 0
         self.timer.start()
         logging.info(f'   Timer started for {self.maxTicks} ticks')
@@ -273,7 +275,15 @@ class Pointer(vtk.vtkObject):
       self.InvokeEvent(self.acquiProgEvent, str(prog))
       if prog >= 1:
         self.timer.stop()
-        p = self.coordAccumulator[int(np.size(self.coordAccumulator,0)/2)]  # get middle coordinates
         self.acquiring = False
-        self.acquiDone = True
-        self.InvokeEvent(self.acquiDoneEvent, str(p.tolist()))
+        if np.size(self.coordAccumulator,0) == 0:
+          msgBox = qt.QMessageBox()
+          msgBox.setText("No sample taken during timer duration for point acquisition. Restart module and try again with increased duration.")
+          msgBoxsgBox.setIcon(qt.QMessageBox().Warning)
+          msgBoxsgBox.setStandardButtons(qt.QMessageBox().Ok)
+          msgBoxsgBox.exec()
+        else:
+          p = self.coordAccumulator[int(np.size(self.coordAccumulator,0)/2)]  # get middle coordinates
+          self.coordAccumulator = np.array([])
+          self.acquiDone = True
+          self.InvokeEvent(self.acquiDoneEvent, str(p.tolist()))
