@@ -1278,7 +1278,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.pointer.setMovingTolerance(self.workingVolume.movingToleranceFromDepth(np.linalg.norm(cd[1:4])))
 
     # Initialize tests (must be done before removing target)
-    self.initTests()
+    self.initTests(self.curLoc)
     # Remove target
     self.removeWorkingVolumeTarget(self.curLoc)
     self.wvGuidanceActive = False
@@ -1295,19 +1295,26 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.startCurrentTest()
 
   # ---------------------------- Tests Control -----------------------------
-  def initTests(self):
+  def initTests(self, loc):
     # Initialize tests todo list
     self.testsToDo = []
     for t in self.tests:
       if t[1]:
         self.testsToDo.append(t[0])
     # Reset tests
+    self.singlePointMeasurements[0].curLoc = loc
     self.singlePointMeasurements[0].reset()
+    self.singlePointMeasurements[1].curLoc = loc
     self.singlePointMeasurements[1].reset()
+    self.singlePointMeasurements[2].curLoc = loc
     self.singlePointMeasurements[2].reset()
+    self.rotMeasurements[0].curLoc = loc
     self.rotMeasurements[0].reset()
+    self.rotMeasurements[1].curLoc = loc
     self.rotMeasurements[1].reset()
+    self.rotMeasurements[2].curLoc = loc
     self.rotMeasurements[2].reset()
+    self.distMeasurement.curLoc = loc
     self.distMeasurement.reset(self.phantom.seq)
 
   def startCurrentTest(self):
@@ -1355,8 +1362,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   def startSinglePtTest(self, i):
     self.curSingMeas = self.singlePointMeasurements[i]
     logging.info(f'***** [{self.curLoc}] {self.curSingMeas.refOriName} Single Point Test Start*****')
-    self.curSingMeas.curLoc = self.curLoc # assign current location
-    self.curSingMeas.reset() # must be done after curLoc assigned
+    self.curSingMeas.reset() # reset again, as it could be from a step restart
     self.curSingMeas.acquiNumMax = 20
     if not self.singleAnn:
       self.singleAnn = vtk.vtkCornerAnnotation()
@@ -1427,8 +1433,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.curRotAxis = self.curRotMeas.rotAxis
     self.curRotAxisName = self.curRotMeas.rotAxisName
     logging.info(f'***** [{self.curLoc}] {self.curRotAxisName} Rotation Test Start *****')
-    self.curRotMeas.curLoc = self.curLoc # assign current location
-    self.curRotMeas.reset() # must be done after curLoc assigned and before basePos assignment
+    self.curRotMeas.reset() # reset again, as it could be from a step restart
     # if base position not defined by Single Point Test (with normal orientation),
     # use our other best estimate of it, which comes from the calibration
     if self.singlePointMeasurements[2].avgPos is not None:
@@ -1553,8 +1558,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
   # ---------------------------- Multi-point Test -----------------------------
   def startDistTest(self):
     logging.info(f'***** [{self.curLoc}] Multi-point Test Start *****')
-    self.distMeasurement.curLoc = self.curLoc # assign current location
-    self.distMeasurement.reset(self.phantom.seq) # must be done after curLoc assigned
+    self.distMeasurement.reset(self.phantom.seq) # reset again, as it could be from a step restart
     # Manage targets
     self.targets.proxiDetect = True
     self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startAcquiring)
