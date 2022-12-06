@@ -265,6 +265,12 @@ The single point test is to be performed with three different phantom orientatio
 ### Rotation Tests
 As described in the ASTM standard, these *Rotation Tests* aim at assessing the stability in measurement of a single point while the pointer rotates around specific axes (roll, pitch, yaw). The definition of these axes are defined in the [pointer file](#pointerFile) and in the [working volume file](#wvFile) in their respective coordinate system.
 
+<p float="left">
+  <img src="/readme_img/yaw.gif" height="380" />
+  <img src="/readme_img/pitch.gif" height="380" /> 
+  <img src="/readme_img/roll.gif" height="380" />
+</p>
+
 To start the test, the user must lodge the pointer in the central divot, which will toggle the display of the pointer angles with respect to each rotation axes. The current rotation axis to be measured is highlighted by the symbols > and <. The pointer must be **rotated only around that specific axis**, i.e. the other angles shall remain as close to 0 as possible during the test.
 
 To start the actual measurements, the user must first rotate the pointer as detailed above until it is not tracked anymore. Then, performing a counter rotation, the pointer is tracked again, which will trigger the program to begin saving the measurements. The user shall continue rotating that way until they reach the opposite end of the angular range, i.e. until the tracking stops again, which will stop the measurements.
