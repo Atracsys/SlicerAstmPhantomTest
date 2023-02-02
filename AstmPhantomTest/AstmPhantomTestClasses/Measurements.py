@@ -6,7 +6,7 @@ import random
 import slicer  # for error popup
 import itertools  # for combinations of divots
 import json
-from .Utils import Dist, RMS, Span, stdDist
+from .Utils import Dist, rmsDist, RMS, Span, stdDist
 
 #
 # Single Point Measurement class
@@ -113,7 +113,7 @@ class SinglePointMeasurement(vtk.vtkObject):
 class RotationMeasurement(vtk.vtkObject):
 
   def __init__(self, axis = 0):
-    self.angStep = 1.0 # degrees
+    self.angStep = 0.25 # degrees
     self.minAngle = -180
     self.maxAngle = 180
     self.rotAxis = axis # 0: roll, 1: pitch, 2: yaw
@@ -145,7 +145,7 @@ class RotationMeasurement(vtk.vtkObject):
       # angle range (smallest and largest)
       rg = [min(meas[:,0]),max(meas[:,0])]
       # RMS of deviations from base position
-      rms = RMS(meas[:,1:]-self.basePos)
+      rms = rmsDist(meas[:,1:], self.basePos)
       return {"num":len(meas), "rangeMin":rg[0], "rangeMax":rg[1],
         "span":Span(meas[:,1:]), "rms":rms}
     else:

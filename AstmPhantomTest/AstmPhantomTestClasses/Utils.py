@@ -157,6 +157,16 @@ def RMS(samples):
   return np.sqrt(np.mean(np.array(S)**2))
 
 #
+# RMS of 3D coordinates from a reference
+# based on distance
+
+def rmsDist(samples, ref):
+  S = np.array(samples)
+  R = np.array(ref)
+  devs = [Dist(s, R) for s in S]
+  return np.sqrt(np.mean(np.array(devs)**2))
+
+#
 # Standard deviation of 3D coordinates
 # based on distance
 #
