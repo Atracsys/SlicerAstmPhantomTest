@@ -190,6 +190,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.locCheckBoxRL.connect('stateChanged(int)', self.onLocCheckBoxRLChanged)
       self.ui.resetCamButton.connect('clicked()', self.logic.resetCam)
       self.ui.resetStepButton.connect('clicked()', self.logic.resetStep)
+      self.ui.anglesCheckbox.connect('stateChanged(int)', self.logic.anglesCheckboxChanged)
       self.ui.recalibOptionCheckBox.connect('stateChanged(int)', self.logic.setRecalibAtLocation)
 
       self.ui.hackCalibButton.connect('clicked()', self.hackCalib)
@@ -388,6 +389,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     """
     Called when the phantom is calibrated
     """
+    self.ui.anglesCheckbox.enabled = True
     self.ui.hackCalibButton.enabled = False
     self.logic.mainRenderer.RemoveActor(self.messageActor)
     # Update moving tolerance
@@ -927,6 +929,15 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.tests = [[]] # initialization
     self.testsToDo = []
     self.runningTest = False
+    # Angle annotation
+    self.dispAngles = False
+    self.angleAnn = vtk.vtkCornerAnnotation()
+    self.angleAnn.GetTextProperty().SetFontSize(180)
+    self.angleAnn.SetLinearFontScaleFactor(18)
+    self.angleAnn.GetTextProperty().SetColor(1,0,0)
+    self.angleAnn.GetTextProperty().BoldOn()
+    self.angleAnn.GetTextProperty().ShadowOn()
+
     # Create all the tests (even if they might not be used)
     #   Single point accuracy and precision tests
     #   (0 = extreme left, 1 = extreme right, 2 = normal)
@@ -934,7 +945,6 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.singleAnn = None
     #   Precision during rotation tests (0 = roll, 1 = pitch, 2 = yaw)
     self.rotMeasurements = [RotationMeasurement(0), RotationMeasurement(1), RotationMeasurement(2)]
-    self.angleAnn = None # annotation actor for angle values
     #   Distance accuracy test
     self.distMeasurement = DistMeasurement()
     self.recalibAtLocation = True
@@ -1019,7 +1029,42 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
         if self.runningTest:
           self.stopCurrentTest()
           self.startCurrentTest()
-
+  
+  @vtk.calldata_type(vtk.VTK_STRING)
+  def onPointerAnglesChanged(self, caller, event=None, calldata=None):
+      cd = ast.literal_eval(calldata)
+      self.angleAnn.SetText(2, f"Roll={cd[0]:.1f}\nPitch={cd[1]:.1f}\nYaw={cd[2]:.1f}")
+  
+  @vtk.calldata_type(vtk.VTK_STRING)
+  def onPointerTrackingChanged(self, caller, event=None, calldata=None):
+    if self.mainRenderer:
+      if self.pointer.tracking:
+        self.mainRenderer.AddActor(self.angleAnn)
+      else:
+        self.mainRenderer.RemoveActor(self.angleAnn)
+  
+  def anglesCheckboxChanged(self, val):
+    if not self.dispAngles and val:
+      self.dispAngles = True
+      if self.mainRenderer:
+        self.pointer.emitAngles = True
+        self.anglesDispObserver = self.pointer.AddObserver(self.pointer.anglesChangedEvent,
+          self.onPointerAnglesChanged)
+        self.pointerTrackingStartedObserver = self.pointer.AddObserver(self.pointer.trackingStartedEvent,
+          self.onPointerTrackingChanged)
+        self.pointerTrackingStoppedObserver = self.pointer.AddObserver(self.pointer.trackingStoppedEvent,
+          self.onPointerTrackingChanged)
+        if self.pointer.tracking:
+          self.mainRenderer.AddActor(self.angleAnn)
+    elif self.dispAngles and not val:
+      self.dispAngles = False
+      if self.mainRenderer:
+        self.pointer.emitAngles = False
+        self.mainRenderer.RemoveActor(self.angleAnn)
+        self.pointer.RemoveObserver(self.anglesDispObserver)
+        self.pointer.RemoveObserver(self.pointerTrackingStartedObserver)
+        self.pointer.RemoveObserver(self.pointerTrackingStoppedObserver)
+  
   def setRecalibAtLocation(self, val):
     self.recalibAtLocation = val
 
@@ -1201,8 +1246,8 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     # so that the central divot hits the wv targets
     self.workingVolume.offset = self.phantom.calGtPts[self.phantom.centralDivot]
     # Update the calibration transform of simp phantom with the one from phantom
-    self.workingVolume.calibTransfoNode.CopyContent(self.phantom.calibTransfoNode)
-
+    self.workingVolume.calibTransfoNode.CopyContent(self.phantom.calibTransfoNode)    
+    
     # Full reset of all measurements if first calibration
     if self.phantom.firstCalibration:
       if self.singlePointMeasurements:
@@ -1442,14 +1487,10 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     else:
       self.curRotMeas.basePos = self.phantom.calGtPts[self.phantom.centralDivot]
       logging.info(f'Using calibrated central divot ({self.curRotMeas.basePos}) as our base position')
-    if not self.angleAnn:
-      self.angleAnn = vtk.vtkCornerAnnotation()
-      self.angleAnn.GetTextProperty().SetFontSize(180)
-      self.angleAnn.SetLinearFontScaleFactor(20)
-      self.angleAnn.GetTextProperty().SetColor(1,0,0)
-      self.angleAnn.GetTextProperty().BoldOn()
-      self.angleAnn.GetTextProperty().ShadowOn()
-    self.angleAnn.SetText(2, "-.-") # 2 = top left    
+
+    # if enabled, disable permanent angles display but stores its previous value
+    self.prevDispAngles = self.dispAngles
+    self.anglesCheckboxChanged(0)
 
     self.targets.proxiDetect = True
     self.rotTestObs1 = self.targets.AddObserver(self.targets.targetHitEvent,
@@ -1471,7 +1512,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.pointer.staticConstraint = True
     self.pointer.emitAngles = True
     self.rotTestObs3 = self.pointer.AddObserver(self.pointer.anglesChangedEvent,
-      self.onPointerAnglesChanged)
+      self.onRotPointerAnglesChanged)
     self.rotTestObs4 = self.pointer.AddObserver(self.pointer.trackingStartedEvent,
       self.onPointerTrackingStarted)
     self.rotTestObs5 = self.pointer.AddObserver(self.pointer.trackingStoppedEvent,
@@ -1490,7 +1531,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
       self.mainRenderer.RemoveActor(self.angleAnn)
 
   @vtk.calldata_type(vtk.VTK_STRING)
-  def onPointerAnglesChanged(self, caller, event=None, calldata=None):
+  def onRotPointerAnglesChanged(self, caller, event=None, calldata=None):
     cd = ast.literal_eval(calldata)
     if self.curRotAxis == 0:
       self.angleAnn.SetText(2, f">Roll={cd[0]:.1f}<\n  Pitch={cd[1]:.1f}\n  Yaw={cd[2]:.1f}")
@@ -1549,6 +1590,10 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.RemoveObserver(self.rotTestObs2)
     self.curRotMeas.updateStats()
     self.runningTest = False
+    
+    # if permanent angles display was previously enabled, re-enable it
+    if self.prevDispAngles:
+      self.anglesCheckboxChanged(1)
 
   def finishRotationTest(self):
     logging.info(f'----- [{self.curLoc}] {self.curRotAxisName} Rotation Test Finished -----')
@@ -1564,6 +1609,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.targets.AddObserver(self.targets.targetHitEvent, self.pointer.startAcquiring)
     self.targets.AddObserver(self.targets.targetDoneEvent, self.onDistMeasTargetDone)
     self.targets.AddObserver(self.targets.targetDoneOutEvent, self.onDistMeasTargetDoneOut)
+    
     self.distMeasNextDiv()
     self.runningTest = True
     self.resetCam()
