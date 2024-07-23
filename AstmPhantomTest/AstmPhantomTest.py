@@ -633,11 +633,11 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   def onOperatorIdChanged(self):
     opId = self.ui.operatorLineEdit.text
     if opId != "" and opId != self.logic.operatorId: # not empty and not the same
-      self.logic.operatorId = opId
       # Checking for dev
       pw = '8ee930e3474f1b9a4a0d7524f3527b93f1ff2e4fa89a385f1ede01a15d7cc9e4'
       salt = '68835c9b8f744414b1e1d2f262e7a911'
       if pw == hashlib.sha256(salt.encode() + self.logic.operatorId.encode()).hexdigest():
+        self.logic.operatorId = "******"
         logging.info("----- Oh, it's you! Welcome back, Sir! -----")
         self.ui.hackCollapsibleButton.collapsed = False
         self.ui.hackCollapsibleButton.enabled = True
@@ -651,6 +651,7 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.hackRLButton.enabled = self.ui.locCheckBoxRL.checked
         self.ui.hackXButton.enabled = True
       else: # normal user
+        self.logic.operatorId = opId
         logging.info(f"----- Welcome {opId} :) -----")
         self.ui.hackCollapsibleButton.collapsed = True
         self.ui.hackCollapsibleButton.enabled = False
