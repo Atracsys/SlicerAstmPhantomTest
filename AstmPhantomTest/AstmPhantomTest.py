@@ -356,9 +356,12 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.pointAcquiNumFramesLineEdit.enabled = False
     self.ui.pointAcquiFramesLabel.enabled = False
     self.ui.hackCalibButton.enabled = True
-
-    self.messageActor.SetText(2, "Phantom calibration:\nPick the target divot with the pointer")
-    self.logic.mainRenderer.AddActor(self.messageActor)
+    
+    if self.logic.skipCalibMode:
+      self.hackCalib()
+    else:    
+      self.messageActor.SetText(2, "Phantom calibration:\nPick the target divot with the pointer")
+      self.logic.mainRenderer.AddActor(self.messageActor)
 
   @vtk.calldata_type(vtk.VTK_STRING)
   def onPhantomFirstCalibrated(self, caller, event = None, calldata = None):
@@ -650,6 +653,8 @@ class AstmPhantomTestWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         self.ui.hackLLButton.enabled = self.ui.locCheckBoxLL.checked
         self.ui.hackRLButton.enabled = self.ui.locCheckBoxRL.checked
         self.ui.hackXButton.enabled = True
+      elif opId == "SkipCalib": # skip calib mode
+        self.logic.skipCalibMode = True
       else: # normal user
         self.logic.operatorId = opId
         logging.info(f"----- Welcome {opId} :) -----")
@@ -910,6 +915,7 @@ class AstmPhantomTestLogic(ScriptedLoadableModuleLogic, vtk.vtkObject):
     self.trackerId = None
     # Phantom
     self.phantom = Phantom(self.mainRenderer)
+    self.skipCalibMode = False
     self.calibratingPhantom = False
     # Pointer
     self.pointer = Pointer()
