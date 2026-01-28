@@ -4,7 +4,7 @@ project(AstmPhantomTest)
 
 #-----------------------------------------------------------------------------
 # Extension meta-information
-set(EXTENSION_HOMEPAGE "https://www.atracsys-measurement.com/astm/")
+set(EXTENSION_HOMEPAGE "https://github.com/Atracsys/SlicerAstmPhantomTest/")
 set(EXTENSION_CATEGORY "IGT")
 set(EXTENSION_CONTRIBUTORS "Sylvain Bernhardt (Atracsys LLC)")
 set(EXTENSION_DESCRIPTION "This extension for 3D Slicer is an assistant in performing the accuracy test of a tracking system as described in the ASTM standard F2554.")
